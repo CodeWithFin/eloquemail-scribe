@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, GitHub, Sparkles } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Github, Sparkles } from 'lucide-react';
 import Button from '../ui-custom/Button';
 import Glass from '../ui-custom/Glass';
 import { useToast } from "@/hooks/use-toast";
@@ -180,7 +179,7 @@ const AuthForm = () => {
           <Button 
             type="button" 
             variant="secondary"
-            iconLeft={<GitHub size={18} />}
+            iconLeft={<Github size={18} />}
             fullWidth
             onClick={() => toast({
               title: "GitHub Sign In",
