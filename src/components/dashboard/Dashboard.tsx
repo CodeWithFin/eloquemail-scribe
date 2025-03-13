@@ -13,77 +13,21 @@ import {
   Star, 
   AlertCircle, 
   CheckCircle2, 
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-
-interface Email {
-  id: string;
-  subject: string;
-  sender: string;
-  preview: string;
-  date: string;
-  read: boolean;
-  starred: boolean;
-  category?: 'primary' | 'social' | 'promotions';
-}
+import { useEmails, starEmail, markAsRead, Email } from '@/services/emailService';
+import { useQueryClient } from '@tanstack/react-query';
 
 const Dashboard = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('inbox');
-  const [emails, setEmails] = useState<Email[]>([
-    {
-      id: '1',
-      subject: 'Project Proposal Update',
-      sender: 'Sarah Johnson',
-      preview: 'I\'ve updated the project timeline based on our discussion yesterday...',
-      date: '10:25 AM',
-      read: false,
-      starred: true,
-      category: 'primary'
-    },
-    {
-      id: '2',
-      subject: 'Meeting Reminder: Strategy Session',
-      sender: 'Marketing Team',
-      preview: 'This is a reminder about our quarterly strategy session scheduled for tomorrow at 2 PM...',
-      date: 'Yesterday',
-      read: true,
-      starred: false,
-      category: 'primary'
-    },
-    {
-      id: '3',
-      subject: 'Your Invoice #2023-056',
-      sender: 'Accounting Department',
-      preview: 'Please find attached your invoice for services rendered during the month of June...',
-      date: 'Jul 10',
-      read: true,
-      starred: true,
-      category: 'primary'
-    },
-    {
-      id: '4',
-      subject: 'New comment on your post',
-      sender: 'LinkedIn',
-      preview: 'John Doe commented on your recent post: "Great insights on the industry trends..."',
-      date: 'Jul 8',
-      read: true,
-      starred: false,
-      category: 'social'
-    },
-    {
-      id: '5',
-      subject: 'Your subscription is about to expire',
-      sender: 'Premium Services',
-      preview: 'Your premium subscription is set to expire in 3 days. Renew now to avoid service interruption...',
-      date: 'Jul 5',
-      read: true,
-      starred: false,
-      category: 'promotions'
-    }
-  ]);
+  
+  // Fetch emails using react-query
+  const { data: emails = [], isLoading, error } = useEmails();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,20 +38,54 @@ const Dashboard = () => {
     
     toast({
       title: "Search performed",
-      description: `Searching for "${searchQuery}" (demo only)`,
+      description: `Searching for "${searchQuery}"`,
     });
   };
 
-  const toggleStarred = (id: string) => {
-    setEmails(emails.map(email => 
-      email.id === id ? { ...email, starred: !email.starred } : email
-    ));
+  const handleToggleStarred = async (id: string, currentStarred: boolean) => {
+    // Optimistic update
+    queryClient.setQueryData(['emails'], (oldData: Email[] | undefined) => 
+      oldData ? oldData.map(email => 
+        email.id === id ? { ...email, starred: !currentStarred } : email
+      ) : []
+    );
+    
+    try {
+      await starEmail(id, !currentStarred);
+    } catch (error) {
+      // Revert on error
+      queryClient.setQueryData(['emails'], (oldData: Email[] | undefined) => 
+        oldData ? oldData.map(email => 
+          email.id === id ? { ...email, starred: currentStarred } : email
+        ) : []
+      );
+      
+      toast({
+        title: "Error",
+        description: "Failed to update starred status",
+        variant: "destructive",
+      });
+    }
   };
 
-  const markAsRead = (id: string) => {
-    setEmails(emails.map(email => 
-      email.id === id ? { ...email, read: true } : email
-    ));
+  const handleMarkAsRead = async (id: string) => {
+    // Optimistic update
+    queryClient.setQueryData(['emails'], (oldData: Email[] | undefined) => 
+      oldData ? oldData.map(email => 
+        email.id === id ? { ...email, read: true } : email
+      ) : []
+    );
+    
+    try {
+      await markAsRead(id);
+    } catch (error) {
+      // Revert on error
+      toast({
+        title: "Error",
+        description: "Failed to mark email as read",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredEmails = emails.filter(email => {
@@ -235,7 +213,31 @@ const Dashboard = () => {
               </span>
             </div>
             
-            {filteredEmails.length > 0 ? (
+            {isLoading ? (
+              <div className="py-12 text-center">
+                <div className="inline-flex items-center justify-center">
+                  <Loader2 size={36} className="text-eloquent-500 animate-spin" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mt-4">Loading emails...</h3>
+              </div>
+            ) : error ? (
+              <div className="py-12 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
+                  <AlertCircle size={24} className="text-red-500" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-1">Failed to load emails</h3>
+                <p className="text-gray-500">
+                  Please check your connection and try again
+                </p>
+                <Button 
+                  variant="secondary" 
+                  className="mt-4"
+                  onClick={() => queryClient.invalidateQueries({ queryKey: ['emails'] })}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : filteredEmails.length > 0 ? (
               <ul className="divide-y divide-gray-200">
                 {filteredEmails.map((email) => (
                   <li 
@@ -243,7 +245,7 @@ const Dashboard = () => {
                     className={`group hover:bg-gray-50 transition-colors duration-150 ${
                       !email.read ? 'bg-eloquent-50' : ''
                     }`}
-                    onClick={() => markAsRead(email.id)}
+                    onClick={() => handleMarkAsRead(email.id)}
                   >
                     <div className="flex px-4 py-4 items-start cursor-pointer">
                       <div className="flex-shrink-0 pt-1">
@@ -251,7 +253,7 @@ const Dashboard = () => {
                           className="text-gray-400 hover:text-eloquent-500 focus:outline-none"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleStarred(email.id);
+                            handleToggleStarred(email.id, email.starred);
                           }}
                         >
                           <Star 
