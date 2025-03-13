@@ -67,13 +67,13 @@ const Footer = () => {
           <div className="flex items-center mb-4 md:mb-0">
             <Link to="/" className="flex items-center">
               <span className="text-xl font-bold text-gray-900">
-                Eloquent<span className="text-eloquent-500">.</span>
+                Email Buddy<span className="text-eloquent-500">.</span>
               </span>
             </Link>
           </div>
           
           <div className="text-gray-500 text-sm">
-            © {currentYear} Eloquent. All rights reserved.
+            © {currentYear} Email Buddy. All rights reserved.
           </div>
         </div>
       </div>

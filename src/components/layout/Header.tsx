@@ -54,7 +54,7 @@ const Header = () => {
         <div className="flex justify-between items-center">
           <Link to="/" className="flex items-center">
             <span className="text-2xl font-bold text-eloquent-800">
-              Eloquent
+              Email Buddy
               <span className="text-eloquent-500">.</span>
             </span>
           </Link>

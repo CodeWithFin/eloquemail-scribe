@@ -5,6 +5,7 @@ import { ArrowRight, Mail, Sparkles, Zap, Search, BarChart4 } from 'lucide-react
 import Header from '../components/layout/Header';
 import Button from '../components/ui-custom/Button';
 import Glass from '../components/ui-custom/Glass';
+import Footer from '../components/layout/Footer';
 
 const Index = () => {
   return (
@@ -20,7 +21,7 @@ const Index = () => {
                 Create Perfect Emails with <span className="text-eloquent-500">AI</span> Assistance
               </h1>
               <p className="mt-6 text-xl text-gray-600">
-                Eloquent helps you write professional, engaging emails in seconds with advanced AI technology.
+                Email Buddy helps you write professional, engaging emails in seconds with advanced AI technology.
               </p>
             </div>
             
@@ -78,7 +79,7 @@ const Index = () => {
       {/* Features Section */}
       <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-900">Why Choose Eloquent</h2>
+          <h2 className="text-3xl font-bold text-gray-900">Why Choose Email Buddy</h2>
           <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
             Our AI-powered platform helps you craft perfect emails faster than ever
           </p>
@@ -115,7 +116,7 @@ const Index = () => {
               Ready to transform your email communication?
             </h2>
             <p className="text-xl text-gray-600">
-              Join thousands of professionals using Eloquent to save time and write better emails.
+              Join thousands of professionals using Email Buddy to save time and write better emails.
             </p>
             <Link to="/auth?signup=true">
               <Button 
@@ -128,6 +129,8 @@ const Index = () => {
           </div>
         </Glass>
       </section>
+      
+      <Footer />
     </div>
   );
 };
