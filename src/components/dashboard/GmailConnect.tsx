@@ -12,22 +12,32 @@ const GmailConnect = () => {
   const { data: profile, isLoading: isLoadingProfile, error: profileError } = useGmailProfile(token);
 
   useEffect(() => {
-    // Check if we have a token in localStorage
+    // Check for OAuth callback in the URL hash and handle token
+    const handleOAuthCallback = () => {
+      const callbackToken = handleGmailAuthCallback();
+      
+      if (callbackToken) {
+        setToken(callbackToken);
+        toast({
+          title: "Gmail connected",
+          description: "Your Gmail account has been successfully connected.",
+        });
+        
+        // Refresh the page to clear URL parameters
+        // This is important to prevent token exposure in browser history
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
+    
+    // Run the callback handler on component mount
+    handleOAuthCallback();
+    
+    // Also check localStorage as a fallback
     const storedToken = localStorage.getItem('gmail_token');
-    
-    // Check for OAuth callback in the URL hash
-    const callbackToken = handleGmailAuthCallback();
-    
-    if (callbackToken) {
-      setToken(callbackToken);
-      toast({
-        title: "Gmail connected",
-        description: "Your Gmail account has been successfully connected.",
-      });
-    } else if (storedToken) {
+    if (!token && storedToken) {
       setToken(storedToken);
     }
-  }, [toast]);
+  }, [toast, token]);
 
   const handleConnect = () => {
     authenticate(undefined, {

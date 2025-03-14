@@ -1,9 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Glass from '../ui-custom/Glass';
 import { useEmails, useStarEmail, useMarkAsRead, Email } from '@/services/emailService';
 import { useToast } from "@/hooks/use-toast";
-import { handleGmailAuthCallback } from '@/services/gmailService';
 
 // Import components
 import StatCards from './StatCards';
@@ -16,11 +14,6 @@ import GmailConnect from './GmailConnect';
 const Dashboard = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('inbox');
-  
-  // Check for OAuth callback on component mount
-  useEffect(() => {
-    handleGmailAuthCallback();
-  }, []);
   
   // Fetch emails using react-query
   const { data: emails = [], isLoading, error } = useEmails();

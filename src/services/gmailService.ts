@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,9 +38,8 @@ const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.labels'
 ].join(' ');
 
-// This would be replaced with real OAuth in production
-// You need to create a Google Cloud project and get these values
-const CLIENT_ID = ''; // Add your Google Cloud OAuth client ID
+// Using the provided client ID
+const CLIENT_ID = '465336393919-pfoeklk9pgp0nhei2hi7j5c5jodv0vsl.apps.googleusercontent.com';
 const REDIRECT_URI = window.location.origin + '/dashboard';
 
 /**
