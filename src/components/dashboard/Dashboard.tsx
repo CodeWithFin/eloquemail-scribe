@@ -1,43 +1,30 @@
 
 import React, { useState } from 'react';
 import Glass from '../ui-custom/Glass';
-import { useEmails, starEmail, markAsRead } from '@/services/emailService';
-import { useQueryClient } from '@tanstack/react-query';
+import { useEmails, useStarEmail, useMarkAsRead } from '@/services/emailService';
 import { useToast } from "@/hooks/use-toast";
 
-// Import the newly created components
+// Import components
 import StatCards from './StatCards';
 import SearchBar from './SearchBar';
 import Sidebar from './Sidebar';
 import EmailHeader from './EmailHeader';
 import EmailList from './EmailList';
+import GmailConnect from './GmailConnect';
 
 const Dashboard = () => {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('inbox');
   
   // Fetch emails using react-query
   const { data: emails = [], isLoading, error } = useEmails();
+  const starEmailMutation = useStarEmail();
+  const markAsReadMutation = useMarkAsRead();
 
   const handleToggleStarred = async (id: string, currentStarred: boolean) => {
-    // Optimistic update
-    queryClient.setQueryData(['emails'], (oldData: any) => 
-      oldData ? oldData.map((email: any) => 
-        email.id === id ? { ...email, starred: !currentStarred } : email
-      ) : []
-    );
-    
     try {
-      await starEmail(id, !currentStarred);
+      await starEmailMutation.mutateAsync({ id, starred: !currentStarred });
     } catch (error) {
-      // Revert on error
-      queryClient.setQueryData(['emails'], (oldData: any) => 
-        oldData ? oldData.map((email: any) => 
-          email.id === id ? { ...email, starred: currentStarred } : email
-        ) : []
-      );
-      
       toast({
         title: "Error",
         description: "Failed to update starred status",
@@ -47,17 +34,9 @@ const Dashboard = () => {
   };
 
   const handleMarkAsRead = async (id: string) => {
-    // Optimistic update
-    queryClient.setQueryData(['emails'], (oldData: any) => 
-      oldData ? oldData.map((email: any) => 
-        email.id === id ? { ...email, read: true } : email
-      ) : []
-    );
-    
     try {
-      await markAsRead(id);
+      await markAsReadMutation.mutateAsync(id);
     } catch (error) {
-      // Revert on error
       toast({
         title: "Error",
         description: "Failed to mark email as read",
@@ -101,6 +80,9 @@ const Dashboard = () => {
         
         <SearchBar />
       </div>
+      
+      {/* Gmail Connect Component */}
+      <GmailConnect />
       
       {/* Stats cards */}
       <StatCards stats={statsData} />
