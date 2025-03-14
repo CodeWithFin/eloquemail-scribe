@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,99 +32,147 @@ export interface GmailMessage {
   internalDate: string;
 }
 
-// This would be replaced with actual Gmail API calls in a production app
-const mockGmailAuth = async (): Promise<string> => {
-  // Simulate auth flow - in a real app this would redirect to Google OAuth
-  console.log('Initiating Gmail authentication flow');
-  
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Return a mock token - in production this would be a real OAuth token
-  return 'mock_gmail_token_123456789';
+// Constants for Google OAuth
+const GMAIL_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.modify',
+  'https://www.googleapis.com/auth/gmail.labels'
+].join(' ');
+
+// This would be replaced with real OAuth in production
+// You need to create a Google Cloud project and get these values
+const CLIENT_ID = ''; // Add your Google Cloud OAuth client ID
+const REDIRECT_URI = window.location.origin + '/dashboard';
+
+/**
+ * Real Google OAuth implementation
+ */
+const initiateGmailAuth = async (): Promise<void> => {
+  if (!CLIENT_ID) {
+    throw new Error('Google Cloud OAuth Client ID is not configured');
+  }
+
+  // Create OAuth 2.0 URL
+  const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  authUrl.searchParams.append('client_id', CLIENT_ID);
+  authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+  authUrl.searchParams.append('response_type', 'token');
+  authUrl.searchParams.append('scope', GMAIL_SCOPES);
+  authUrl.searchParams.append('prompt', 'consent');
+  authUrl.searchParams.append('access_type', 'offline');
+
+  // Redirect to Google's OAuth page
+  window.location.href = authUrl.toString();
 };
 
-// This function would be replaced with actual Gmail API calls
-const fetchGmailProfile = async (token: string): Promise<GmailProfile> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
+// Handle the OAuth callback by extracting the token from URL
+export const handleGmailAuthCallback = (): string | null => {
+  const hash = window.location.hash;
   
-  // For demo purposes, fetching mock profile data
-  console.log(`Fetching Gmail profile with token: ${token}`);
+  if (!hash) return null;
   
-  return {
-    emailAddress: 'user@example.com',
-    messagesTotal: 125,
-    threadsTotal: 80,
-    historyId: '12345'
-  };
-};
-
-// Fetch emails from Gmail API (mocked for now)
-const fetchGmailMessages = async (token: string): Promise<GmailMessage[]> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  const params = new URLSearchParams(hash.substring(1));
+  const accessToken = params.get('access_token');
   
-  console.log(`Fetching Gmail messages with token: ${token}`);
-  
-  // Create realistic-looking mock data
-  const messages: GmailMessage[] = [];
-  const senders = ['John Smith', 'Sarah Johnson', 'Tech Newsletter', 'LinkedIn', 'GitHub', 'AWS Notifications'];
-  const subjects = [
-    'Meeting tomorrow at 2pm',
-    'Project update: Phase 2 completed',
-    'Your weekly digest',
-    'New connection request',
-    'Pull request review requested',
-    'Your AWS bill is available'
-  ];
-  
-  for (let i = 0; i < 15; i++) {
-    const senderIndex = Math.floor(Math.random() * senders.length);
-    const subjectIndex = Math.floor(Math.random() * subjects.length);
-    const date = new Date();
-    date.setDate(date.getDate() - Math.floor(Math.random() * 7));
+  if (accessToken) {
+    // Store the token in localStorage
+    localStorage.setItem('gmail_token', accessToken);
     
-    messages.push({
-      id: `msg_${i}`,
-      threadId: `thread_${i}`,
-      labelIds: ['INBOX', Math.random() > 0.3 ? 'UNREAD' : ''],
-      snippet: `This is a preview of the email content. Click to read more...`,
-      payload: {
-        headers: [
-          { name: 'From', value: `${senders[senderIndex]} <${senders[senderIndex].toLowerCase().replace(' ', '.')}@example.com>` },
-          { name: 'Subject', value: subjects[subjectIndex] },
-          { name: 'Date', value: date.toISOString() }
-        ],
-        mimeType: 'text/plain',
-        body: {
-          data: '',
-          size: 1024
-        }
-      },
-      sizeEstimate: 1024,
-      historyId: '12345',
-      internalDate: date.getTime().toString()
+    // Remove the hash from URL to avoid token leakage
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+  
+  return accessToken;
+};
+
+// Real API calls to Gmail using the obtained token
+const fetchGmailProfile = async (token: string): Promise<GmailProfile> => {
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch Gmail profile');
+  }
+  
+  return response.json();
+};
+
+// Fetch emails from Gmail API (real implementation)
+const fetchGmailMessages = async (token: string): Promise<GmailMessage[]> => {
+  // First get message IDs (max 50)
+  const listResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  if (!listResponse.ok) {
+    throw new Error('Failed to fetch Gmail messages list');
+  }
+  
+  const data = await listResponse.json();
+  const messageIds = data.messages || [];
+  
+  // Then fetch details for each message
+  const messages: GmailMessage[] = [];
+  
+  for (const { id } of messageIds.slice(0, 20)) { // Limit to 20 to avoid rate limits
+    const messageResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
+    
+    if (messageResponse.ok) {
+      const messageData = await messageResponse.json();
+      messages.push(messageData);
+    }
   }
   
   return messages;
 };
 
-export const starGmailMessage = async (id: string, starred: boolean): Promise<void> => {
-  // In a real app, this would call the Gmail API to add/remove the STARRED label
-  console.log(`Marking Gmail message ${id} as ${starred ? 'starred' : 'unstarred'}`);
+// Real implementation for starring a message
+export const starGmailMessage = async (id: string, starred: boolean, token: string): Promise<void> => {
+  const addLabels = starred ? ['STARRED'] : [];
+  const removeLabels = starred ? [] : ['STARRED'];
   
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
+  const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/modify`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      addLabelIds: addLabels,
+      removeLabelIds: removeLabels
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to update Gmail message labels');
+  }
 };
 
-export const markGmailMessageAsRead = async (id: string): Promise<void> => {
-  // In a real app, this would call the Gmail API to remove the UNREAD label
-  console.log(`Marking Gmail message ${id} as read`);
+// Real implementation for marking as read
+export const markGmailMessageAsRead = async (id: string, token: string): Promise<void> => {
+  const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}/modify`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      removeLabelIds: ['UNREAD']
+    })
+  });
   
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 300));
+  if (!response.ok) {
+    throw new Error('Failed to mark Gmail message as read');
+  }
 };
 
 // React Query hooks for Gmail API interactions
@@ -131,17 +180,11 @@ export const useGmailAuth = () => {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: mockGmailAuth,
-    onSuccess: () => {
-      toast({
-        title: "Gmail connected",
-        description: "Your Gmail account has been successfully connected.",
-      });
-    },
-    onError: () => {
+    mutationFn: initiateGmailAuth,
+    onError: (error) => {
       toast({
         title: "Connection failed",
-        description: "Failed to connect to Gmail. Please try again.",
+        description: `Failed to connect to Gmail: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -161,15 +204,17 @@ export const useGmailMessages = (token: string | null) => {
     queryKey: ['gmailMessages', token],
     queryFn: () => token ? fetchGmailMessages(token) : Promise.reject('No token'),
     enabled: !!token,
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 60000, // Refetch every minute
   });
 };
 
 export const useStarGmailMessage = () => {
   const queryClient = useQueryClient();
+  const token = localStorage.getItem('gmail_token');
   
   return useMutation({
-    mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starGmailMessage(id, starred),
+    mutationFn: ({ id, starred }: { id: string; starred: boolean }) => 
+      token ? starGmailMessage(id, starred, token) : Promise.reject('No token'),
     onMutate: async ({ id, starred }) => {
       // Optimistic update
       queryClient.setQueryData(['gmailMessages'], (oldData: any) => 
@@ -183,7 +228,7 @@ export const useStarGmailMessage = () => {
         ) : []
       );
     },
-    onError: (error, variables) => {
+    onError: (error) => {
       // Revert on error via refetch
       queryClient.invalidateQueries({ queryKey: ['gmailMessages'] });
     }
@@ -192,9 +237,10 @@ export const useStarGmailMessage = () => {
 
 export const useMarkGmailMessageAsRead = () => {
   const queryClient = useQueryClient();
+  const token = localStorage.getItem('gmail_token');
   
   return useMutation({
-    mutationFn: (id: string) => markGmailMessageAsRead(id),
+    mutationFn: (id: string) => token ? markGmailMessageAsRead(id, token) : Promise.reject('No token'),
     onMutate: async (id) => {
       // Optimistic update
       queryClient.setQueryData(['gmailMessages'], (oldData: any) => 

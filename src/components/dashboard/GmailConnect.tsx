@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useGmailAuth, useGmailProfile } from '@/services/gmailService';
+import { useGmailAuth, useGmailProfile, handleGmailAuthCallback } from '@/services/gmailService';
 import { AlertCircle, Mail, Check } from 'lucide-react';
 import Button from '../ui-custom/Button';
 import { useToast } from "@/hooks/use-toast";
@@ -14,19 +14,28 @@ const GmailConnect = () => {
   useEffect(() => {
     // Check if we have a token in localStorage
     const storedToken = localStorage.getItem('gmail_token');
-    if (storedToken) {
+    
+    // Check for OAuth callback in the URL hash
+    const callbackToken = handleGmailAuthCallback();
+    
+    if (callbackToken) {
+      setToken(callbackToken);
+      toast({
+        title: "Gmail connected",
+        description: "Your Gmail account has been successfully connected.",
+      });
+    } else if (storedToken) {
       setToken(storedToken);
     }
-  }, []);
+  }, [toast]);
 
   const handleConnect = () => {
     authenticate(undefined, {
-      onSuccess: (newToken) => {
-        localStorage.setItem('gmail_token', newToken);
-        setToken(newToken);
+      onError: (error) => {
         toast({
-          title: "Gmail connected",
-          description: "Your Gmail account has been successfully connected.",
+          title: "Connection failed",
+          description: `Failed to connect to Gmail: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          variant: "destructive",
         });
       }
     });
@@ -96,6 +105,9 @@ const GmailConnect = () => {
             <h3 className="text-sm font-medium text-red-800">
               Failed to connect to Gmail
             </h3>
+            <p className="text-sm text-red-700 mt-1">
+              {profileError instanceof Error ? profileError.message : 'Unable to authenticate'}
+            </p>
             <Button 
               variant="outline" 
               size="sm"
