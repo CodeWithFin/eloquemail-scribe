@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import Glass from '../ui-custom/Glass';
-import { useEmails, useStarEmail, useMarkAsRead } from '@/services/emailService';
+import { useEmails, useStarEmail, useMarkAsRead, Email } from '@/services/emailService';
 import { useToast } from "@/hooks/use-toast";
 
 // Import components

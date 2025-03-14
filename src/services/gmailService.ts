@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
 
@@ -224,6 +223,14 @@ export const convertGmailToEmail = (message: GmailMessage) => {
   const date = new Date(dateHeader);
   const formattedDate = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   
+  let emailCategory: 'primary' | 'social' | 'promotions' = 'primary';
+  
+  if (message.labelIds.includes('CATEGORY_SOCIAL')) {
+    emailCategory = 'social';
+  } else if (message.labelIds.includes('CATEGORY_PROMOTIONS')) {
+    emailCategory = 'promotions';
+  }
+  
   return {
     id: message.id,
     subject: subjectHeader,
@@ -232,7 +239,6 @@ export const convertGmailToEmail = (message: GmailMessage) => {
     date: formattedDate,
     read: !message.labelIds.includes('UNREAD'),
     starred: message.labelIds.includes('STARRED'),
-    category: message.labelIds.includes('CATEGORY_SOCIAL') ? 'social' : 
-              message.labelIds.includes('CATEGORY_PROMOTIONS') ? 'promotions' : 'primary'
+    category: emailCategory
   };
 };

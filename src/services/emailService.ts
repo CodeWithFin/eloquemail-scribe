@@ -46,7 +46,7 @@ export const useEmails = () => {
   if (isUsingGmail && token) {
     return {
       ...gmailQuery,
-      data: gmailQuery.data?.map(convertGmailToEmail) || []
+      data: gmailQuery.data?.map(convertGmailToEmail) as Email[] || []
     };
   }
   
