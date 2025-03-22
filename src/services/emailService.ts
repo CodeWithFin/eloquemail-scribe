@@ -1,6 +1,12 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { convertGmailToEmail, useGmailMessages, useStarGmailMessage, useMarkGmailMessageAsRead } from './gmailService';
+import { 
+  convertGmailToEmail, 
+  useGmailMessages, 
+  useStarGmailMessage, 
+  useMarkGmailMessageAsRead,
+  isGmailAuthenticated
+} from './gmail';
 
 export interface Email {
   id: string;
@@ -14,7 +20,7 @@ export interface Email {
 }
 
 // We'll use this flag to determine if we're using mock data or real Gmail
-const isUsingGmail = localStorage.getItem('gmail_token') !== null;
+const isUsingGmail = isGmailAuthenticated();
 
 // This function would be replaced with actual API calls in a production app
 const fetchEmails = async (): Promise<Email[]> => {

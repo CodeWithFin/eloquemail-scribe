@@ -1,6 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { useGmailAuth, useGmailProfile, handleGmailAuthCallback } from '@/services/gmailService';
+import { 
+  useGmailAuth, 
+  useGmailProfile, 
+  handleGmailAuthCallback 
+} from '@/services/gmail';
 import { AlertCircle, Mail, Check } from 'lucide-react';
 import Button from '../ui-custom/Button';
 import { useToast } from "@/hooks/use-toast";
