@@ -49,7 +49,11 @@ export const handleAurinkoAuthCallback = (): string | null => {
 };
 
 // Initiate the Aurinko authentication flow
-export const initiateAurinkoAuth = (): void => {
-  const authUrl = getAurinkoAuthUrl();
-  window.location.href = authUrl;
+export const initiateAurinkoAuth = (): Promise<void> => {
+  return new Promise((resolve) => {
+    const authUrl = getAurinkoAuthUrl();
+    window.location.href = authUrl;
+    // Resolving immediately since page will redirect
+    resolve();
+  });
 };
