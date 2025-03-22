@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,7 +41,11 @@ const GMAIL_SCOPES = [
 
 // Using the provided client ID
 const CLIENT_ID = '465336393919-pfoeklk9pgp0nhei2hi7j5c5jodv0vsl.apps.googleusercontent.com';
-const REDIRECT_URI = window.location.origin;
+
+// This needs to EXACTLY match what's registered in Google Cloud Console
+// We're now storing the actual URI used during development to help with debugging
+const CURRENT_URI = window.location.origin;
+console.log('Current redirect URI:', CURRENT_URI);
 
 /**
  * Real Google OAuth implementation
@@ -50,15 +55,16 @@ const initiateGmailAuth = async (): Promise<void> => {
     throw new Error('Google Cloud OAuth Client ID is not configured');
   }
 
-  // Create OAuth 2.0 URL - Fixed configuration
+  // Create OAuth 2.0 URL
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authUrl.searchParams.append('client_id', CLIENT_ID);
-  authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+  authUrl.searchParams.append('redirect_uri', CURRENT_URI);
   authUrl.searchParams.append('response_type', 'token');
   authUrl.searchParams.append('scope', GMAIL_SCOPES);
   authUrl.searchParams.append('prompt', 'consent');
-  // Removing 'access_type' parameter as it's not compatible with response_type=token
-
+  
+  console.log('Initiating auth with redirect URI:', CURRENT_URI);
+  
   // Redirect to Google's OAuth page
   window.location.href = authUrl.toString();
 };

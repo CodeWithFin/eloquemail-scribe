@@ -4,14 +4,20 @@ import { useGmailAuth, useGmailProfile, handleGmailAuthCallback } from '@/servic
 import { AlertCircle, Mail, Check } from 'lucide-react';
 import Button from '../ui-custom/Button';
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const GmailConnect = () => {
   const { toast } = useToast();
   const [token, setToken] = useState<string | null>(localStorage.getItem('gmail_token'));
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const { mutate: authenticate, isPending: isAuthenticating } = useGmailAuth();
   const { data: profile, isLoading: isLoadingProfile, error: profileError } = useGmailProfile(token);
 
   useEffect(() => {
+    // Log current URL to help diagnose redirect issues
+    console.log('Current location:', window.location.href);
+    console.log('Origin:', window.location.origin);
+    
     // Check for OAuth callback in the URL hash and handle token
     const handleOAuthCallback = () => {
       const callbackToken = handleGmailAuthCallback();
@@ -23,8 +29,10 @@ const GmailConnect = () => {
           description: "Your Gmail account has been successfully connected.",
         });
         
+        // Clear any previous errors
+        setConnectionError(null);
+        
         // Refresh the page to clear URL parameters
-        // This is important to prevent token exposure in browser history
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     };
@@ -40,11 +48,14 @@ const GmailConnect = () => {
   }, [toast, token]);
 
   const handleConnect = () => {
+    setConnectionError(null); // Clear any previous errors
     authenticate(undefined, {
       onError: (error) => {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setConnectionError(errorMessage);
         toast({
           title: "Connection failed",
-          description: `Failed to connect to Gmail: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          description: `Failed to connect to Gmail: ${errorMessage}`,
           variant: "destructive",
         });
       }
@@ -54,6 +65,7 @@ const GmailConnect = () => {
   const handleDisconnect = () => {
     localStorage.removeItem('gmail_token');
     setToken(null);
+    setConnectionError(null);
     toast({
       title: "Gmail disconnected",
       description: "Your Gmail account has been disconnected.",
@@ -104,20 +116,35 @@ const GmailConnect = () => {
     );
   }
 
-  if (profileError) {
+  if (profileError || connectionError) {
+    const errorMessage = connectionError || 
+      (profileError instanceof Error ? profileError.message : 'Unable to authenticate');
+    
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <AlertCircle size={20} className="text-red-500" />
           </div>
-          <div className="ml-3">
+          <div className="ml-3 w-full">
             <h3 className="text-sm font-medium text-red-800">
               Failed to connect to Gmail
             </h3>
             <p className="text-sm text-red-700 mt-1">
-              {profileError instanceof Error ? profileError.message : 'Unable to authenticate'}
+              {errorMessage}
             </p>
+            
+            <Alert variant="destructive" className="mt-3 mb-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Important OAuth Setup Required</AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">You need to register this redirect URI in your Google Cloud Console:</p>
+                <code className="bg-red-100 p-1 rounded block overflow-x-auto text-xs">
+                  {window.location.origin}
+                </code>
+              </AlertDescription>
+            </Alert>
+            
             <Button 
               variant="outline" 
               size="sm"
