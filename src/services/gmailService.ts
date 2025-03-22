@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
 
@@ -41,7 +40,7 @@ const GMAIL_SCOPES = [
 
 // Using the provided client ID
 const CLIENT_ID = '465336393919-pfoeklk9pgp0nhei2hi7j5c5jodv0vsl.apps.googleusercontent.com';
-const REDIRECT_URI = window.location.origin + '/dashboard';
+const REDIRECT_URI = window.location.origin;
 
 /**
  * Real Google OAuth implementation
