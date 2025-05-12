@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Button from '../ui-custom/Button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Settings } from 'lucide-react';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -79,6 +78,11 @@ const Header = () => {
                 <Link to="/compose">
                   <Button>New Email</Button>
                 </Link>
+                <Link to="/settings" title="Settings">
+                  <Button variant="ghost" size="sm" className="p-2">
+                    <Settings size={20} />
+                  </Button>
+                </Link>
               </div>
             ) : (
               <div className="flex items-center space-x-4">
@@ -125,6 +129,9 @@ const Header = () => {
                   </Link>
                   <Link to="/compose" className="w-full">
                     <Button fullWidth>New Email</Button>
+                  </Link>
+                  <Link to="/settings" className="w-full">
+                    <Button variant="ghost" fullWidth>Settings</Button>
                   </Link>
                 </div>
               ) : (

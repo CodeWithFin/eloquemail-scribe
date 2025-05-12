@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSendGmailMessage, useCreateGmailDraft } from '@/services/gmail';
+import { 
+  useImproveEmailText, 
+  useGenerateSubjectLine, 
+  useAdjustEmailTone 
+} from '@/services/ai/hooks';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,8 +16,23 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import { Send, Save, X, MinusCircle, PlusCircle } from 'lucide-react';
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Send, 
+  Save, 
+  X, 
+  MinusCircle, 
+  PlusCircle, 
+  Sparkles, 
+  RefreshCw,
+  Wand2
+} from 'lucide-react';
 import Editor from '../ui-custom/Editor';
+import { toast } from '@/hooks/use-toast';
 
 interface ComposeEmailProps {
   onCancel?: () => void;
@@ -36,12 +56,22 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
   
+  // Gmail hooks
   const sendEmail = useSendGmailMessage();
   const saveDraft = useCreateGmailDraft();
   
+  // AI hooks
+  const improveText = useImproveEmailText();
+  const generateSubject = useGenerateSubjectLine();
+  const adjustTone = useAdjustEmailTone();
+  
   const handleSend = async () => {
     if (!to) {
-      alert('Please enter a recipient email address');
+      toast({
+        title: "Missing recipient",
+        description: "Please enter a recipient email address",
+        variant: "destructive"
+      });
       return;
     }
     
@@ -121,6 +151,70 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
       } else {
         navigate('/dashboard');
       }
+    }
+  };
+  
+  // AI-powered features
+  const handleImproveText = async () => {
+    if (!body) {
+      toast({
+        title: "Nothing to improve",
+        description: "Please write some content first"
+      });
+      return;
+    }
+    
+    try {
+      const improved = await improveText.mutateAsync(body);
+      setBody(improved);
+      toast({
+        title: "Text improved",
+        description: "Your email has been enhanced"
+      });
+    } catch (error) {
+      // Error is handled in the hook
+    }
+  };
+  
+  const handleGenerateSubject = async () => {
+    if (!body) {
+      toast({
+        title: "Cannot generate subject",
+        description: "Please write your email content first"
+      });
+      return;
+    }
+    
+    try {
+      const generatedSubject = await generateSubject.mutateAsync(body);
+      setSubject(generatedSubject);
+      toast({
+        title: "Subject generated",
+        description: "A subject line has been created based on your content"
+      });
+    } catch (error) {
+      // Error is handled in the hook
+    }
+  };
+  
+  const handleAdjustTone = async (tone: 'formal' | 'friendly' | 'assertive' | 'concise' | 'persuasive') => {
+    if (!body) {
+      toast({
+        title: "Nothing to adjust",
+        description: "Please write some content first"
+      });
+      return;
+    }
+    
+    try {
+      const adjustedText = await adjustTone.mutateAsync({ text: body, tone });
+      setBody(adjustedText);
+      toast({
+        title: "Tone adjusted",
+        description: `Your email now sounds more ${tone}`
+      });
+    } catch (error) {
+      // Error is handled in the hook
     }
   };
   
@@ -218,24 +312,134 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
             </div>
           )}
           
-          <div>
-            <label htmlFor="subject" className="block text-sm font-medium">Subject:</label>
-            <Input 
-              id="subject" 
-              value={subject} 
-              onChange={(e) => setSubject(e.target.value)} 
-              placeholder="Email subject"
-            />
+          <div className="flex space-x-2">
+            <div className="flex-1">
+              <label htmlFor="subject" className="block text-sm font-medium">Subject:</label>
+              <Input 
+                id="subject" 
+                value={subject} 
+                onChange={(e) => setSubject(e.target.value)} 
+                placeholder="Email subject"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10"
+                onClick={handleGenerateSubject}
+                disabled={generateSubject.isPending || !body}
+                title="Generate subject from content"
+              >
+                {generateSubject.isPending ? (
+                  <RefreshCw size={18} className="animate-spin" />
+                ) : (
+                  <Sparkles size={18} />
+                )}
+              </Button>
+            </div>
           </div>
           
           <div>
-            <label htmlFor="body" className="block text-sm font-medium mb-2">Message:</label>
+            <div className="flex justify-between items-center mb-2">
+              <label htmlFor="body" className="block text-sm font-medium">Message:</label>
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImproveText}
+                  disabled={improveText.isPending || !body}
+                  className="text-xs"
+                >
+                  {improveText.isPending ? (
+                    <RefreshCw size={14} className="mr-1 animate-spin" />
+                  ) : (
+                    <Wand2 size={14} className="mr-1" />
+                  )}
+                  Improve Text
+                </Button>
+                
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      disabled={!body}
+                    >
+                      <Sparkles size={14} className="mr-1" />
+                      Adjust Tone
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-48 p-2">
+                    <div className="flex flex-col space-y-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleAdjustTone('formal')}
+                        disabled={adjustTone.isPending}
+                        className="justify-start"
+                      >
+                        Formal
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleAdjustTone('friendly')}
+                        disabled={adjustTone.isPending}
+                        className="justify-start"
+                      >
+                        Friendly
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleAdjustTone('assertive')}
+                        disabled={adjustTone.isPending}
+                        className="justify-start"
+                      >
+                        Assertive
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleAdjustTone('concise')}
+                        disabled={adjustTone.isPending}
+                        className="justify-start"
+                      >
+                        Concise
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleAdjustTone('persuasive')}
+                        disabled={adjustTone.isPending}
+                        className="justify-start"
+                      >
+                        Persuasive
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            
             <Editor 
               initialValue={body}
               onChange={setBody}
               placeholder="Compose your email..."
               minHeight="300px"
             />
+            
+            {adjustTone.isPending && (
+              <div className="mt-2 flex items-center justify-center space-x-2 text-sm text-gray-500">
+                <RefreshCw size={14} className="animate-spin" />
+                <span>Adjusting tone...</span>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
