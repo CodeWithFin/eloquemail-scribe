@@ -1,14 +1,15 @@
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import openaiService from './openai';
+import geminiService from './gemini';
 
 /**
  * Utility function to check if AI features are properly configured
  */
 export const isAIConfigured = (): boolean => {
-  const apiKey = localStorage.getItem('openai_api_key');
-  const aiEnabled = localStorage.getItem('ai_features_enabled') === 'true';
-  return !!apiKey && aiEnabled;
+  // AI is always configured now since we're using built-in simulation
+  // Just check if it's not explicitly disabled
+  const aiEnabled = localStorage.getItem('ai_features_enabled') !== 'false';
+  return aiEnabled;
 };
 
 /**
@@ -21,13 +22,13 @@ export const useImproveEmailText = () => {
     mutationFn: async (text: string) => {
       if (!isAIConfigured()) {
         toast({
-          title: "AI Features Not Configured",
-          description: "Please configure your OpenAI API key in Settings first",
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
           variant: "destructive",
         });
         return text;
       }
-      return await openaiService.improveEmailText(text);
+      return await geminiService.improveEmailText(text);
     },
     onError: (error) => {
       toast({
@@ -49,17 +50,45 @@ export const useGenerateSubjectLine = () => {
     mutationFn: async (emailBody: string) => {
       if (!isAIConfigured()) {
         toast({
-          title: "AI Features Not Configured",
-          description: "Please configure your OpenAI API key in Settings first",
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
           variant: "destructive",
         });
         return "Email Subject";
       }
-      return await openaiService.generateSubjectLine(emailBody);
+      return await geminiService.generateSubjectLine(emailBody);
     },
     onError: (error) => {
       toast({
         title: "Error generating subject",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+};
+
+/**
+ * Hook for generating email content based on subject
+ */
+export const useGenerateEmailContent = () => {
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (subject: string) => {
+      if (!isAIConfigured()) {
+        toast({
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
+          variant: "destructive",
+        });
+        return "";
+      }
+      return await geminiService.generateEmailContent(subject);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error generating email content",
         description: error instanceof Error ? error.message : "Something went wrong",
         variant: "destructive",
       });
@@ -77,13 +106,13 @@ export const useSummarizeEmailThread = () => {
     mutationFn: async (threadContent: string) => {
       if (!isAIConfigured()) {
         toast({
-          title: "AI Features Not Configured",
-          description: "Please configure your OpenAI API key in Settings first",
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
           variant: "destructive",
         });
-        return "Please configure AI features in Settings";
+        return "Please enable AI features in Settings";
       }
-      return await openaiService.summarizeEmailThread(threadContent);
+      return await geminiService.summarizeEmailThread(threadContent);
     },
     onError: (error) => {
       toast({
@@ -106,13 +135,13 @@ export const useAdjustEmailTone = () => {
       async ({ text, tone }: { text: string; tone: 'formal' | 'friendly' | 'assertive' | 'concise' | 'persuasive' }) => {
         if (!isAIConfigured()) {
           toast({
-            title: "AI Features Not Configured",
-            description: "Please configure your OpenAI API key in Settings first",
+            title: "AI Features Disabled",
+            description: "Please enable AI features in Settings",
             variant: "destructive",
           });
           return text;
         }
-        return await openaiService.adjustEmailTone(text, tone);
+        return await geminiService.adjustEmailTone(text, tone);
       },
     onError: (error) => {
       toast({
@@ -134,13 +163,13 @@ export const useGenerateReplyOptions = () => {
     mutationFn: async (emailContent: string) => {
       if (!isAIConfigured()) {
         toast({
-          title: "AI Features Not Configured",
-          description: "Please configure your OpenAI API key in Settings first",
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
           variant: "destructive",
         });
-        return ["Please configure AI features in Settings"];
+        return ["Please enable AI features in Settings"];
       }
-      return await openaiService.generateReplyOptions(emailContent);
+      return await geminiService.generateReplyOptions(emailContent);
     },
     onError: (error) => {
       toast({
@@ -174,13 +203,13 @@ export const useGenerateFullReply = () => {
     }) => {
       if (!isAIConfigured()) {
         toast({
-          title: "AI Features Not Configured",
-          description: "Please configure your OpenAI API key in Settings first",
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
           variant: "destructive",
         });
-        return "Please configure AI features in Settings";
+        return "Please enable AI features in Settings";
       }
-      return await openaiService.generateFullReply(emailContent, options || {});
+      return await geminiService.generateFullReply(emailContent, options || {});
     },
     onError: (error) => {
       toast({
@@ -202,18 +231,18 @@ export const useAnalyzeEmail = () => {
     mutationFn: async (emailContent: string) => {
       if (!isAIConfigured()) {
         toast({
-          title: "AI Features Not Configured",
-          description: "Please configure your OpenAI API key in Settings first",
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
           variant: "destructive",
         });
         return {
           sentiment: 'neutral' as const,
-          keyPoints: ["Please configure AI features in Settings"],
+          keyPoints: ["Please enable AI features in Settings"],
           actionItems: [],
           urgency: 'low' as const
         };
       }
-      return await openaiService.analyzeEmail(emailContent);
+      return await geminiService.analyzeEmail(emailContent);
     },
     onError: (error) => {
       toast({
@@ -228,6 +257,7 @@ export const useAnalyzeEmail = () => {
 export default {
   useImproveEmailText,
   useGenerateSubjectLine,
+  useGenerateEmailContent,
   useSummarizeEmailThread,
   useAdjustEmailTone,
   useGenerateReplyOptions,

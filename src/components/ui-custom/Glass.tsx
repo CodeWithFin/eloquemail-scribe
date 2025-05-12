@@ -1,11 +1,9 @@
-
 import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface GlassProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
-  dark?: boolean;
   blur?: 'sm' | 'md' | 'lg' | 'xl';
   opacity?: 'light' | 'medium' | 'heavy';
   border?: boolean;
@@ -14,7 +12,6 @@ interface GlassProps extends React.HTMLAttributes<HTMLDivElement> {
 const Glass = ({
   children,
   className,
-  dark = false,
   blur = 'md',
   opacity = 'medium',
   border = true,
@@ -28,18 +25,18 @@ const Glass = ({
   };
 
   const bgOpacityMap = {
-    light: dark ? 'bg-opacity-40' : 'bg-opacity-40',
-    medium: dark ? 'bg-opacity-60' : 'bg-opacity-60',
-    heavy: dark ? 'bg-opacity-80' : 'bg-opacity-80',
+    light: 'bg-opacity-40 dark:bg-opacity-40',
+    medium: 'bg-opacity-60 dark:bg-opacity-60',
+    heavy: 'bg-opacity-80 dark:bg-opacity-80',
   };
 
   return (
     <div
       className={cn(
-        dark ? 'bg-gray-900' : 'bg-white',
+        'bg-white dark:bg-gray-900',
         bgOpacityMap[opacity],
         blurMap[blur],
-        border && (dark ? 'border border-gray-800 border-opacity-50' : 'border border-white border-opacity-20'),
+        border && 'border border-white border-opacity-20 dark:border-gray-800 dark:border-opacity-50',
         'shadow-glass rounded-xl',
         className
       )}

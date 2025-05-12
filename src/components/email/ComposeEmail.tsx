@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSendGmailMessage, useCreateGmailDraft } from '@/services/gmail';
 import { 
   useImproveEmailText, 
   useGenerateSubjectLine, 
   useAdjustEmailTone,
+  useGenerateEmailContent,
   isAIConfigured
 } from '@/services/ai/hooks';
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,8 @@ import {
   PlusCircle, 
   Sparkles, 
   RefreshCw,
-  Wand2
+  Wand2,
+  MessageSquare
 } from 'lucide-react';
 import Editor from '../ui-custom/Editor';
 import { toast } from '@/hooks/use-toast';
@@ -42,6 +44,17 @@ interface ComposeEmailProps {
   initialSubject?: string;
   initialBody?: string;
 }
+
+// Debounce function to prevent too many API calls
+const debounce = (func: Function, delay: number) => {
+  let timeoutId: NodeJS.Timeout;
+  return (...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, delay);
+  };
+};
 
 const ComposeEmail: React.FC<ComposeEmailProps> = ({ 
   onCancel, 
@@ -57,6 +70,7 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
   const [showBcc, setShowBcc] = useState(false);
   const [cc, setCc] = useState('');
   const [bcc, setBcc] = useState('');
+  const [autoGenerate, setAutoGenerate] = useState(false);
   
   // Gmail hooks
   const sendEmail = useSendGmailMessage();
@@ -66,6 +80,13 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
   const improveText = useImproveEmailText();
   const generateSubject = useGenerateSubjectLine();
   const adjustTone = useAdjustEmailTone();
+  const generateContent = useGenerateEmailContent();
+  
+  // Check auto-generate setting on component mount
+  useEffect(() => {
+    const isAutoGenerate = localStorage.getItem('auto_generate_content') === 'true';
+    setAutoGenerate(isAutoGenerate);
+  }, []);
   
   const handleSend = async () => {
     if (!to) {
@@ -220,6 +241,67 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
     }
   };
   
+  // Generate email content based on subject
+  const handleGenerateContent = async () => {
+    if (!subject) {
+      toast({
+        title: "Missing subject",
+        description: "Please enter a subject line first"
+      });
+      return;
+    }
+    
+    // If there's existing content, confirm before replacing
+    if (body) {
+      if (!window.confirm("This will replace your existing email content. Are you sure?")) {
+        return;
+      }
+    }
+    
+    try {
+      const generatedContent = await generateContent.mutateAsync(subject);
+      setBody(generatedContent);
+      toast({
+        title: "Content generated",
+        description: "Email content has been created based on your subject"
+      });
+    } catch (error) {
+      // Error is handled in the hook
+    }
+  };
+  
+  // Debounced version of content generation with no confirmation
+  const debouncedGenerateContent = useCallback(
+    debounce(async (subjectText: string) => {
+      if (!subjectText || subjectText.length < 3 || !isAIConfigured() || !autoGenerate) {
+        return;
+      }
+      
+      try {
+        // Only auto-generate if body is empty
+        if (!body) {
+          const generatedContent = await generateContent.mutateAsync(subjectText);
+          setBody(generatedContent);
+          toast({
+            title: "Content generated",
+            description: "Email draft created based on subject"
+          });
+        }
+      } catch (error) {
+        // Silently fail for auto-generation
+        console.error('Auto-generation failed:', error);
+      }
+    }, 1000),
+    [body, autoGenerate, generateContent]
+  );
+  
+  // Call the debounced function when subject changes
+  useEffect(() => {
+    if (autoGenerate && subject.length >= 3) {
+      debouncedGenerateContent(subject);
+    }
+  }, [subject, autoGenerate, debouncedGenerateContent]);
+  
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
@@ -328,8 +410,13 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
                 onChange={(e) => setSubject(e.target.value)} 
                 placeholder="Email subject"
               />
+              {autoGenerate && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Auto-generate is on. Type subject to create content.
+                </p>
+              )}
             </div>
-            <div className="flex items-end">
+            <div className="flex items-end gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -343,6 +430,21 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
                   <RefreshCw size={18} className="animate-spin" />
                 ) : (
                   <Sparkles size={18} />
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10"
+                onClick={handleGenerateContent}
+                disabled={generateContent.isPending || !subject}
+                title="Generate content from subject"
+              >
+                {generateContent.isPending ? (
+                  <RefreshCw size={18} className="animate-spin" />
+                ) : (
+                  <MessageSquare size={18} />
                 )}
               </Button>
             </div>
@@ -440,6 +542,13 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
               placeholder="Compose your email..."
               minHeight="300px"
             />
+            
+            {generateContent.isPending && (
+              <div className="mt-2 flex items-center justify-center space-x-2 text-sm text-gray-500">
+                <RefreshCw size={14} className="animate-spin" />
+                <span>Generating email content...</span>
+              </div>
+            )}
             
             {adjustTone.isPending && (
               <div className="mt-2 flex items-center justify-center space-x-2 text-sm text-gray-500">

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Mail, Star, CheckCircle2, Clock, Archive, Trash2 } from 'lucide-react';
 
@@ -26,14 +25,14 @@ const Sidebar = ({ activeTab, setActiveTab, getFilteredCount }: SidebarProps) =>
             <button
               className={`flex items-center w-full px-3 py-2 rounded-lg transition-colors duration-150 ${
                 activeTab === item.id
-                  ? 'bg-eloquent-50 text-eloquent-600'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-eloquent-50 dark:bg-eloquent-900/20 text-eloquent-600 dark:text-eloquent-400'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
               }`}
               onClick={() => setActiveTab(item.id)}
             >
-              <span className="mr-3 text-gray-500">{item.icon}</span>
+              <span className="mr-3 text-gray-500 dark:text-gray-400">{item.icon}</span>
               <span>{item.label}</span>
-              <span className="ml-auto bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 text-xs">
+              <span className="ml-auto bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full px-2 py-0.5 text-xs">
                 {getFilteredCount(item.id)}
               </span>
             </button>

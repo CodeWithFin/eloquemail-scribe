@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Button from '../ui-custom/Button';
 import { Menu, X, Settings } from 'lucide-react';
+import { ThemeToggle } from '../ui/theme-toggle';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -46,13 +47,13 @@ const Header = () => {
   return (
     <header 
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'py-3 bg-white/80 backdrop-blur-lg shadow-sm' : 'py-5 bg-transparent'
+        isScrolled ? 'py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-sm' : 'py-5 bg-transparent'
       }`}
     >
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           <Link to="/" className="flex items-center">
-            <span className="text-2xl font-bold text-eloquent-800">
+            <span className="text-2xl font-bold text-eloquent-800 dark:text-white">
               Email Buddy
               <span className="text-eloquent-500">.</span>
             </span>
@@ -64,7 +65,7 @@ const Header = () => {
               <a
                 key={link.name}
                 href={link.path}
-                className="text-gray-700 hover:text-eloquent-500 transition-colors font-medium"
+                className="text-gray-700 dark:text-gray-300 hover:text-eloquent-500 dark:hover:text-eloquent-400 transition-colors font-medium"
               >
                 {link.name}
               </a>
@@ -83,6 +84,7 @@ const Header = () => {
                     <Settings size={20} />
                   </Button>
                 </Link>
+                <ThemeToggle />
               </div>
             ) : (
               <div className="flex items-center space-x-4">
@@ -92,38 +94,42 @@ const Header = () => {
                 <Link to="/auth?signup=true">
                   <Button>Get Started</Button>
                 </Link>
+                <ThemeToggle />
               </div>
             )}
           </nav>
 
           {/* Mobile Menu Button */}
-          <button 
-            className="md:hidden text-gray-700 hover:text-eloquent-500 transition-colors"
-            onClick={toggleMobileMenu}
-            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-          >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="md:hidden flex items-center space-x-2">
+            <ThemeToggle />
+            <button 
+              className="text-gray-700 dark:text-gray-300 hover:text-eloquent-500 dark:hover:text-eloquent-400 transition-colors"
+              onClick={toggleMobileMenu}
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white shadow-lg animate-fade-in">
+        <div className="md:hidden bg-white dark:bg-gray-900 shadow-lg animate-fade-in">
           <div className="container mx-auto px-4 py-4">
             <nav className="flex flex-col space-y-4">
               {!isLoggedIn && navLinks.map((link) => (
                 <a
                   key={link.name}
                   href={link.path}
-                  className="text-gray-700 hover:text-eloquent-500 transition-colors py-2 font-medium"
+                  className="text-gray-700 dark:text-gray-300 hover:text-eloquent-500 dark:hover:text-eloquent-400 transition-colors py-2 font-medium"
                 >
                   {link.name}
                 </a>
               ))}
               
               {isLoggedIn ? (
-                <div className="flex flex-col space-y-3 pt-3 border-t border-gray-100">
+                <div className="flex flex-col space-y-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                   <Link to="/dashboard" className="w-full">
                     <Button variant="ghost" fullWidth>Dashboard</Button>
                   </Link>
@@ -135,7 +141,7 @@ const Header = () => {
                   </Link>
                 </div>
               ) : (
-                <div className="flex flex-col space-y-3 pt-3 border-t border-gray-100">
+                <div className="flex flex-col space-y-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                   <Link to="/auth" className="w-full">
                     <Button variant="ghost" fullWidth>Sign in</Button>
                   </Link>

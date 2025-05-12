@@ -54,16 +54,33 @@ const Dashboard = () => {
   };
 
   const getFilteredCount = (type: string) => {
-    if (type === 'starred') return (emails as Email[]).filter(e => e.starred).length;
-    if (type === 'inbox') return emails.length;
-    return 0; // Demo purposes
+    const emailsArray = emails as Email[];
+    
+    switch (type) {
+      case 'inbox':
+        return emailsArray.filter(e => 
+          e.category === 'primary' || e.category === 'social' || e.category === 'promotions'
+        ).length;
+      case 'starred':
+        return emailsArray.filter(e => e.starred).length;
+      case 'sent':
+        return emailsArray.filter(e => e.category === 'sent').length;
+      case 'drafts':
+        return emailsArray.filter(e => e.category === 'drafts').length;
+      case 'archived':
+        return emailsArray.filter(e => e.category === 'archived').length;
+      case 'trash':
+        return emailsArray.filter(e => e.category === 'trash').length;
+      default:
+        return 0;
+    }
   };
 
   const statsData = [
     { label: 'Total Emails', value: emails.length || 0, color: 'bg-eloquent-500' },
     { label: 'Unread', value: emails.filter(e => !e.read).length || 0, color: 'bg-amber-500' },
     { label: 'Starred', value: emails.filter(e => e.starred).length || 0, color: 'bg-purple-500' },
-    { label: 'Categories', value: '3', color: 'bg-green-500' }
+    { label: 'Sent', value: getFilteredCount('sent'), color: 'bg-green-500' }
   ];
 
   // Filter emails based on active tab
@@ -75,15 +92,15 @@ const Dashboard = () => {
     if (activeTab === 'trash') return email.category === 'trash';
     
     // Default inbox
-    return true;
+    return email.category === 'primary' || email.category === 'social' || email.category === 'promotions';
   });
 
   return (
     <div className="w-full max-w-7xl mx-auto animate-fade-up space-y-8">
       <div className="flex flex-col lg:flex-row justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Email Dashboard</h1>
-          <p className="text-gray-600 mt-2">Manage and track your emails</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Email Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">Manage and track your emails</p>
         </div>
         
         <SearchBar />

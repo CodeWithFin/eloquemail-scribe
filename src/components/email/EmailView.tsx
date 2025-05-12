@@ -288,7 +288,7 @@ const EmailView: React.FC<EmailViewProps> = ({ messageId, onBack }) => {
     );
   }
   
-  const urgencyColor = analysis?.urgency === 'high' ? 'destructive' : (analysis?.urgency === 'medium' ? 'yellow' : 'default');
+  const urgencyColor = analysis?.urgency === 'high' ? 'destructive' : (analysis?.urgency === 'medium' ? 'secondary' : 'default');
   const sentimentColor = analysis?.sentiment === 'positive' ? 'green' : (analysis?.sentiment === 'negative' ? 'destructive' : 'default');
   
   return (
@@ -460,8 +460,8 @@ const EmailView: React.FC<EmailViewProps> = ({ messageId, onBack }) => {
               />
             </TabsContent>
             <TabsContent value="summary">
-              <div className="prose max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: summary }} />
+              <div className="prose max-w-none whitespace-pre-wrap">
+                {summary}
               </div>
             </TabsContent>
           </Tabs>
