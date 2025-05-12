@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Check, X, PenLine, Sparkles } from "lucide-react";
 import { isAIConfigured } from "@/services/ai/hooks";
 import { toast } from "@/hooks/use-toast";
+import geminiService from '@/services/ai/gemini';
 
 interface EditorProps {
   initialValue?: string;
@@ -67,44 +68,22 @@ const Editor: React.FC<EditorProps> = ({
         textareaRef.current.focus();
       }
       
-      // Get the API key from localStorage
-      const apiKey = localStorage.getItem('openai_api_key');
-      if (!apiKey) {
-        return;
+      // Use the geminiService to get completion suggestion
+      try {
+        const completion = await geminiService.generateTextCompletion(text);
+        
+        if (completion && completion.length > 5) {
+          setSuggestion(completion);
+          setShowSuggestion(true);
+        }
+      } catch (error) {
+        console.error('Error generating suggestion:', error);
+        toast({
+          title: "Error Generating Suggestion",
+          description: error instanceof Error ? error.message : "Something went wrong with the AI service",
+          variant: "destructive",
+        });
       }
-      
-      // Create OpenAI client
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({
-        apiKey,
-        dangerouslyAllowBrowser: true
-      });
-      
-      // Call OpenAI for completion suggestion
-      const response = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an email autocomplete assistant. Continue the user\'s text with a brief, natural-sounding completion that would make sense in an email context. Respond with ONLY the continuation text, no explanations or quotes.'
-          },
-          {
-            role: 'user',
-            content: `Complete this email text naturally: "${text}"`
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 50
-      });
-      
-      const completion = response.choices[0]?.message?.content?.trim();
-      
-      if (completion && completion.length > 5) {
-        setSuggestion(completion);
-        setShowSuggestion(true);
-      }
-    } catch (error) {
-      console.error('Error generating suggestion:', error);
     } finally {
       setIsGenerating(false);
     }

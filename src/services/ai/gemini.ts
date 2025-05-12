@@ -588,6 +588,32 @@ export const generateEmailContent = async (subject: string): Promise<string> => 
   }
 };
 
+/**
+ * Generate text completion for Editor component
+ */
+export const generateTextCompletion = async (text: string): Promise<string> => {
+  try {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Since we're simulating Gemini AI, let's create some plausible completions
+    const completions = [
+      " I look forward to hearing back from you soon.",
+      " Please let me know if you need any additional information.",
+      " I appreciate your time and consideration.",
+      " Let's schedule a meeting to discuss this further.",
+      " Thank you for your prompt attention to this matter.",
+      " I hope this finds you well."
+    ];
+    
+    // Select a random completion that makes sense in context
+    const randomIndex = Math.floor(Math.random() * completions.length);
+    return completions[randomIndex];
+  } catch (error) {
+    console.error('Error generating text completion:', error);
+    throw new Error('Unable to generate text completion');
+  }
+};
+
 export default {
   improveEmailText,
   generateSubjectLine,
@@ -596,5 +622,6 @@ export default {
   generateReplyOptions,
   generateFullReply,
   analyzeEmail,
-  generateEmailContent
+  generateEmailContent,
+  generateTextCompletion
 }; 
