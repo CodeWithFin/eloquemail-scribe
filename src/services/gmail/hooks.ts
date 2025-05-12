@@ -1,7 +1,9 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
-import { fetchGmailProfile, fetchGmailMessages, starGmailMessage, markGmailMessageAsRead } from './api';
+import { fetchGmailProfile, fetchGmailMessages, starGmailMessage, markGmailMessageAsRead, convertGmailToEmail } from './api';
 import { initiateGmailAuth, getGmailToken } from './auth';
+import { GmailMessage } from './types';
 
 /**
  * Hook for initiating Gmail authentication
@@ -61,7 +63,7 @@ export const useStarGmailMessage = () => {
       token ? starGmailMessage(id, starred, token) : Promise.reject('No token'),
     onMutate: async ({ id, starred }) => {
       // Optimistic update
-      queryClient.setQueryData(['gmailMessages'], (oldData: any) => 
+      queryClient.setQueryData(['gmailMessages'], (oldData: GmailMessage[] | undefined) => 
         oldData ? oldData.map((message: GmailMessage) => 
           message.id === id ? { 
             ...message, 
@@ -90,7 +92,7 @@ export const useMarkGmailMessageAsRead = () => {
     mutationFn: (id: string) => token ? markGmailMessageAsRead(id, token) : Promise.reject('No token'),
     onMutate: async (id) => {
       // Optimistic update
-      queryClient.setQueryData(['gmailMessages'], (oldData: any) => 
+      queryClient.setQueryData(['gmailMessages'], (oldData: GmailMessage[] | undefined) => 
         oldData ? oldData.map((message: GmailMessage) => 
           message.id === id ? { 
             ...message, 

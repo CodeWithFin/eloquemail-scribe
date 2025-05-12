@@ -46,7 +46,7 @@ const Dashboard = () => {
   };
 
   const getFilteredCount = (type: string) => {
-    if (type === 'starred') return emails.filter(e => e.starred).length;
+    if (type === 'starred') return (emails as Email[]).filter(e => e.starred).length;
     if (type === 'inbox') return emails.length;
     return 0; // Demo purposes
   };
@@ -59,7 +59,7 @@ const Dashboard = () => {
   ];
 
   // Filter emails based on active tab
-  const filteredEmails = emails.filter(email => {
+  const filteredEmails = (emails as Email[]).filter(email => {
     if (activeTab === 'starred') return email.starred;
     if (activeTab === 'sent') return false; // No sent emails in demo
     if (activeTab === 'drafts') return false; // No drafts in demo
