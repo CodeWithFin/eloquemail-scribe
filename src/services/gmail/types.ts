@@ -1,4 +1,3 @@
-
 // Gmail API response types
 export interface GmailProfile {
   emailAddress: string;
@@ -39,4 +38,15 @@ export interface GmailEmail {
   read: boolean;
   starred: boolean;
   category?: 'primary' | 'social' | 'promotions';
+}
+
+/**
+ * Email draft for composing/sending messages
+ */
+export interface EmailDraft {
+  to: string;
+  subject: string;
+  body: string;
+  cc?: string;
+  bcc?: string;
 }

@@ -1,9 +1,17 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
-import { fetchGmailProfile, fetchGmailMessages, starGmailMessage, markGmailMessageAsRead, convertGmailToEmail } from './api';
+import { 
+  fetchGmailProfile, 
+  fetchGmailMessages, 
+  starGmailMessage, 
+  markGmailMessageAsRead, 
+  convertGmailToEmail,
+  sendGmailMessage,
+  fetchGmailMessageContent,
+  createGmailDraft
+} from './api';
 import { initiateGmailAuth, getGmailToken } from './auth';
-import { GmailMessage } from './types';
+import { GmailMessage, EmailDraft } from './types';
 
 /**
  * Hook for initiating Gmail authentication
@@ -104,6 +112,77 @@ export const useMarkGmailMessageAsRead = () => {
     onError: () => {
       // Revert on error via refetch
       queryClient.invalidateQueries({ queryKey: ['gmailMessages'] });
+    }
+  });
+};
+
+/**
+ * Hook for fetching a single Gmail message content
+ */
+export const useGmailMessageContent = (messageId: string | null) => {
+  const token = getGmailToken();
+  
+  return useQuery({
+    queryKey: ['gmailMessageContent', messageId],
+    queryFn: () => messageId && token 
+      ? fetchGmailMessageContent(messageId, token) 
+      : Promise.reject('No message ID or token'),
+    enabled: !!messageId && !!token,
+  });
+};
+
+/**
+ * Hook for sending an email
+ */
+export const useSendGmailMessage = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const token = getGmailToken();
+  
+  return useMutation({
+    mutationFn: (draft: EmailDraft) => 
+      token ? sendGmailMessage(draft, token) : Promise.reject('No token'),
+    onSuccess: () => {
+      // Invalidate query to refetch messages
+      queryClient.invalidateQueries({ queryKey: ['gmailMessages'] });
+      
+      toast({
+        title: "Email sent",
+        description: "Your email was sent successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to send email",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive",
+      });
+    }
+  });
+};
+
+/**
+ * Hook for creating a draft email
+ */
+export const useCreateGmailDraft = () => {
+  const { toast } = useToast();
+  const token = getGmailToken();
+  
+  return useMutation({
+    mutationFn: (draft: EmailDraft) => 
+      token ? createGmailDraft(draft, token) : Promise.reject('No token'),
+    onSuccess: () => {
+      toast({
+        title: "Draft saved",
+        description: "Your draft was saved successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to save draft",
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: "destructive",
+      });
     }
   });
 };

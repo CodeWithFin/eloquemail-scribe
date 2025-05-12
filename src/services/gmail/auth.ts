@@ -1,4 +1,3 @@
-
 // Constants for Google OAuth
 const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
@@ -8,6 +7,8 @@ const GMAIL_SCOPES = [
 
 // Using the Google client ID
 const CLIENT_ID = '465336393919-pfoeklk9pgp0nhei2hi7j5c5jodv0vsl.apps.googleusercontent.com';
+// We'll use a dynamic redirect URI based on the current origin
+// This will work both locally and when deployed to Vercel
 
 /**
  * Initiates Gmail authentication flow via Google OAuth
@@ -17,14 +18,17 @@ export const initiateGmailAuth = async (): Promise<void> => {
     throw new Error('Google Cloud OAuth Client ID is not configured');
   }
 
-  // Get current origin for redirect URI
+  // Get the current origin for the redirect URI
   const currentOrigin = window.location.origin;
-  console.log('Initiating auth with redirect URI:', `${currentOrigin}/auth/callback/google`);
+  const redirectUri = `${currentOrigin}/auth/callback/google`;
+  
+  // Log the redirect URI we're using
+  console.log('Initiating auth with redirect URI:', redirectUri);
 
   // Create OAuth 2.0 URL
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   authUrl.searchParams.append('client_id', CLIENT_ID);
-  authUrl.searchParams.append('redirect_uri', `${currentOrigin}/auth/callback/google`);
+  authUrl.searchParams.append('redirect_uri', redirectUri);
   authUrl.searchParams.append('response_type', 'token');
   authUrl.searchParams.append('scope', GMAIL_SCOPES);
   authUrl.searchParams.append('prompt', 'consent');

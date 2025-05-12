@@ -1,23 +1,30 @@
 import React from 'react';
-import ComposeEmail from '../components/email/ComposeEmail';
+import { useParams, Navigate } from 'react-router-dom';
 import Header from '../components/layout/Header';
+import EmailView from '../components/email/EmailView';
 import { isGmailAuthenticated } from '@/services/gmail';
-import { Navigate } from 'react-router-dom';
 
-const ComposePage = () => {
+const ViewEmailPage: React.FC = () => {
+  const { messageId } = useParams<{ messageId: string }>();
+  
   // Redirect to auth page if not authenticated with Gmail
   if (!isGmailAuthenticated()) {
     return <Navigate to="/auth" replace />;
   }
-
+  
+  // Redirect to dashboard if no message ID provided
+  if (!messageId) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <ComposeEmail />
+        <EmailView messageId={messageId} />
       </div>
     </div>
   );
 };
 
-export default ComposePage;
+export default ViewEmailPage; 

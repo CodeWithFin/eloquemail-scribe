@@ -1,7 +1,11 @@
-
 import React, { useState } from 'react';
 import Glass from '../ui-custom/Glass';
-import { useEmails, useStarEmail, useMarkAsRead, Email } from '@/services/emailService';
+import { useNavigate } from 'react-router-dom';
+import { 
+  useGmailMessages, 
+  useStarGmailMessage, 
+  useMarkGmailMessageAsRead 
+} from '@/services/gmail';
 import { useToast } from "@/hooks/use-toast";
 
 // Import components
@@ -11,15 +15,17 @@ import Sidebar from './Sidebar';
 import EmailHeader from './EmailHeader';
 import EmailList from './EmailList';
 import GmailConnect from './GmailConnect';
+import { Email } from '@/services/emailService';
 
 const Dashboard = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inbox');
   
-  // Fetch emails using react-query
-  const { data: emails = [], isLoading, error } = useEmails();
-  const starEmailMutation = useStarEmail();
-  const markAsReadMutation = useMarkAsRead();
+  // Fetch emails using react-query with Gmail API
+  const { data: emails = [], isLoading, error } = useGmailMessages(localStorage.getItem('gmail_token'));
+  const starEmailMutation = useStarGmailMessage();
+  const markAsReadMutation = useMarkGmailMessageAsRead();
 
   const handleToggleStarred = async (id: string, currentStarred: boolean) => {
     try {
@@ -36,6 +42,8 @@ const Dashboard = () => {
   const handleMarkAsRead = async (id: string) => {
     try {
       await markAsReadMutation.mutateAsync(id);
+      // Navigate to email detail view
+      navigate(`/email/${id}`);
     } catch (error) {
       toast({
         title: "Error",
@@ -52,19 +60,19 @@ const Dashboard = () => {
   };
 
   const statsData = [
-    { label: 'Emails Sent', value: 142, color: 'bg-eloquent-500' },
-    { label: 'Open Rate', value: '64%', color: 'bg-green-500' },
-    { label: 'Response Rate', value: '48%', color: 'bg-amber-500' },
-    { label: 'AI Improvements', value: 89, color: 'bg-purple-500' }
+    { label: 'Total Emails', value: emails.length || 0, color: 'bg-eloquent-500' },
+    { label: 'Unread', value: emails.filter(e => !e.read).length || 0, color: 'bg-amber-500' },
+    { label: 'Starred', value: emails.filter(e => e.starred).length || 0, color: 'bg-purple-500' },
+    { label: 'Categories', value: '3', color: 'bg-green-500' }
   ];
 
   // Filter emails based on active tab
   const filteredEmails = (emails as Email[]).filter(email => {
     if (activeTab === 'starred') return email.starred;
-    if (activeTab === 'sent') return false; // No sent emails in demo
-    if (activeTab === 'drafts') return false; // No drafts in demo
-    if (activeTab === 'archived') return false; // No archived emails in demo
-    if (activeTab === 'trash') return false; // No trash emails in demo
+    if (activeTab === 'sent') return email.category === 'sent';
+    if (activeTab === 'drafts') return email.category === 'drafts';
+    if (activeTab === 'archived') return email.category === 'archived';
+    if (activeTab === 'trash') return email.category === 'trash';
     
     // Default inbox
     return true;

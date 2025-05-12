@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,6 +8,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Compose from "./pages/Compose";
+import ViewEmail from "./pages/ViewEmail";
 import NotFound from "./pages/NotFound";
 import GoogleAuthCallback from "./components/auth/GoogleAuthCallback";
 
@@ -35,6 +35,7 @@ const App: React.FC = () => {
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/compose" element={<Compose />} />
+              <Route path="/email/:messageId" element={<ViewEmail />} />
               <Route path="/auth/callback/google" element={<GoogleAuthCallback />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
