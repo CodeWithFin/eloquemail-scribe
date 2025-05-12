@@ -1,69 +1,58 @@
-# Welcome to your Lovable project!!
+# Email Buddy
 
-## Project info
+**Email Buddy** is an intelligent email assistant web application designed to streamline your email management experience. Built with Next.js and integrated with Large Language Models (LLMs), it offers a simplified inbox with AI-powered features to enhance productivity.
 
-**URL**: https://lovable.dev/projects/28e96745-128d-4e21-bb51-2ee6c5b6b31f
+## 🌐 Live Demo
 
-## How can I edit this code?
+👉 [Visit Email Buddy](https://email-buddy2-0-r49t.vercel.app/)
 
-There are several ways of editing your application.
+## 🚀 Features
 
-**Use Lovable**
+- ✉️ **Simplified Inbox** – A clean and intuitive interface for managing your emails efficiently.
+- 🧠 **AI-Powered Summarization** – Get concise summaries of lengthy email threads.
+- 💬 **Smart Reply Suggestions** – Generate context-aware responses to emails using LLMs.
+- ⚡ **Fast & Responsive** – Built with Next.js for a seamless experience.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/28e96745-128d-4e21-bb51-2ee6c5b6b31f) and start prompting.
+## 🛠️ Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+Follow these steps to run the project locally:
 
-**Use your preferred IDE**
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/email-buddy.git
+   cd email-buddy
+   ```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+3. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
 
-Follow these steps:
+4. Open your browser and go to:
+   ```
+   http://localhost:3000
+   ```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 📦 Tech Stack
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **Framework**: [Next.js](https://nextjs.org/)
+- **Language**: JavaScript / TypeScript
+- **AI Integration**: Large Language Models (LLMs)
+- **Deployment**: [Vercel](https://vercel.com/)
 
-# Step 3: Install the necessary dependencies.
-npm i
+## 📄 License
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
 
-**Edit a file directly in GitHub**
+## 🤝 Contributing
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Contributions are welcome! Feel free to open an issue or submit a pull request.
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/28e96745-128d-4e21-bb51-2ee6c5b6b31f) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+Crafted with ❤️ to make email smarter and simpler.
