@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Glass from '../ui-custom/Glass';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -16,6 +16,25 @@ import EmailHeader from './EmailHeader';
 import EmailList from './EmailList';
 import GmailConnect from './GmailConnect';
 import { Email } from '@/services/emailService';
+
+// Helper function to group emails by date
+const groupEmailsByDate = (emails: Email[]) => {
+  const groups: { [key: string]: Email[] } = {};
+  
+  emails.forEach(email => {
+    // Use the date from the email or create a date string
+    const dateStr = email.date.includes(' ') ? email.date : 
+      new Date(email.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    
+    if (!groups[dateStr]) {
+      groups[dateStr] = [];
+    }
+    
+    groups[dateStr].push(email);
+  });
+  
+  return groups;
+};
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -84,16 +103,23 @@ const Dashboard = () => {
   ];
 
   // Filter emails based on active tab
-  const filteredEmails = (emails as Email[]).filter(email => {
-    if (activeTab === 'starred') return email.starred;
-    if (activeTab === 'sent') return email.category === 'sent';
-    if (activeTab === 'drafts') return email.category === 'drafts';
-    if (activeTab === 'archived') return email.category === 'archived';
-    if (activeTab === 'trash') return email.category === 'trash';
-    
-    // Default inbox
-    return email.category === 'primary' || email.category === 'social' || email.category === 'promotions';
-  });
+  const filteredEmails = useMemo(() => {
+    return (emails as Email[]).filter(email => {
+      if (activeTab === 'starred') return email.starred;
+      if (activeTab === 'sent') return email.category === 'sent';
+      if (activeTab === 'drafts') return email.category === 'drafts';
+      if (activeTab === 'archived') return email.category === 'archived';
+      if (activeTab === 'trash') return email.category === 'trash';
+      
+      // Default inbox
+      return email.category === 'primary' || email.category === 'social' || email.category === 'promotions';
+    });
+  }, [emails, activeTab]);
+
+  // Group emails by date
+  const emailsByDate = useMemo(() => {
+    return groupEmailsByDate(filteredEmails);
+  }, [filteredEmails]);
 
   return (
     <div className="w-full max-w-7xl mx-auto animate-fade-up space-y-8">
@@ -134,6 +160,7 @@ const Dashboard = () => {
             
             <EmailList 
               emails={filteredEmails}
+              emailsByDate={emailsByDate}
               isLoading={isLoading}
               error={error as Error | null}
               activeTab={activeTab}

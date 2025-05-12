@@ -377,7 +377,7 @@ const EmailView: React.FC<EmailViewProps> = ({ messageId, onBack }) => {
         
         {/* Email analysis section */}
         {showAnalysis && analysis && (
-          <div className="mt-4 p-3 border border-gray-200 rounded-md bg-gray-50">
+          <div className="mt-4 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800">
             <h3 className="text-sm font-medium mb-2 flex items-center">
               <AlertCircle size={16} className="mr-2 text-blue-500" />
               Email Analysis
@@ -532,7 +532,7 @@ const EmailView: React.FC<EmailViewProps> = ({ messageId, onBack }) => {
             </div>
             
             {generatedReply && (
-              <div className="border border-gray-200 rounded-md p-4 bg-gray-50">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-800">
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="text-sm font-medium">Generated Reply</h4>
                   <Button variant="ghost" size="sm" onClick={copyGeneratedReply} className="h-7 text-xs">

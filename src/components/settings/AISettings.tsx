@@ -99,7 +99,7 @@ const AISettings: React.FC<AISettingsProps> = ({ onSave }) => {
           </div>
         )}
         
-        <div className="p-4 bg-blue-50 rounded-md flex items-start">
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-md flex items-start">
           <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
           <p className="text-sm text-blue-700">
             EloquEmail includes built-in AI assistance to help you create better emails.

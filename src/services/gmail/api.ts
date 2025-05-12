@@ -23,7 +23,7 @@ export const fetchGmailProfile = async (token: string): Promise<GmailProfile> =>
  */
 export const fetchGmailMessages = async (token: string, searchQuery?: string): Promise<GmailMessage[]> => {
   // Build query string
-  let queryParams = 'maxResults=50';
+  let queryParams = 'maxResults=100';
   if (searchQuery) {
     queryParams += `&q=${encodeURIComponent(searchQuery)}`;
   }
@@ -42,21 +42,42 @@ export const fetchGmailMessages = async (token: string, searchQuery?: string): P
   const data = await listResponse.json();
   const messageIds = data.messages || [];
   
-  // Then fetch details for each message
-  const messages: GmailMessage[] = [];
-  
-  for (const { id } of messageIds.slice(0, 20)) { // Limit to 20 to avoid rate limits
-    const messageResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    
-    if (messageResponse.ok) {
-      const messageData = await messageResponse.json();
-      messages.push(messageData);
-    }
+  if (messageIds.length === 0) {
+    return [];
   }
+  
+  // Instead of fetching each message individually, use batch request (10 at a time)
+  const messages: GmailMessage[] = [];
+  const batchSize = 10;
+  const batchCount = Math.min(Math.ceil(messageIds.length / batchSize), 5); // Limit to 5 batches (50 messages)
+  
+  const fetchBatch = async (startIdx: number, endIdx: number) => {
+    const batchPromises = messageIds
+      .slice(startIdx, endIdx)
+      .map(({ id }) => 
+        fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }).then(res => res.ok ? res.json() : null)
+      );
+    
+    const batchResults = await Promise.all(batchPromises);
+    return batchResults.filter(Boolean);
+  };
+  
+  // Process batches in parallel
+  const batchPromises = [];
+  for (let i = 0; i < batchCount; i++) {
+    const startIdx = i * batchSize;
+    const endIdx = startIdx + batchSize;
+    batchPromises.push(fetchBatch(startIdx, endIdx));
+  }
+  
+  const batchResults = await Promise.all(batchPromises);
+  batchResults.forEach(batch => {
+    messages.push(...batch);
+  });
   
   return messages;
 };
@@ -109,23 +130,55 @@ export const markGmailMessageAsRead = async (id: string, token: string): Promise
  * Convert a Gmail message to our application's email format
  */
 export const convertGmailToEmail = (message: GmailMessage): Email => {
-  const fromHeader = message.payload?.headers.find(h => h.name === 'From')?.value || '';
-  const subjectHeader = message.payload?.headers.find(h => h.name === 'Subject')?.value || '';
-  const dateHeader = message.payload?.headers.find(h => h.name === 'Date')?.value || '';
+  if (!message || !message.payload) {
+    // Handle missing or malformed message
+    return {
+      id: message?.id || 'unknown',
+      subject: '(Error loading email)',
+      sender: 'Unknown',
+      preview: 'This email could not be loaded properly.',
+      date: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      read: true,
+      starred: false,
+      category: 'primary'
+    };
+  }
+
+  // Use destructuring for headers to make code more readable
+  const headers = message.payload.headers || [];
+  const headerMap = new Map(headers.map(h => [h.name.toLowerCase(), h.value]));
   
-  const sender = fromHeader.split('<')[0].trim();
-  const date = new Date(dateHeader);
-  const formattedDate = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const fromHeader = headerMap.get('from') || '';
+  const subjectHeader = headerMap.get('subject') || '';
+  const dateHeader = headerMap.get('date') || '';
   
+  // Extract sender name from "Name <email@example.com>" format
+  const sender = fromHeader.includes('<') 
+    ? fromHeader.split('<')[0].trim() 
+    : fromHeader.trim();
+  
+  // Parse date and ensure it's valid
+  let formattedDate;
+  try {
+    const date = new Date(dateHeader);
+    formattedDate = !isNaN(date.getTime())
+      ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+      : 'Unknown date';
+  } catch (e) {
+    formattedDate = 'Unknown date';
+  }
+  
+  // Determine email category
   let emailCategory: 'primary' | 'social' | 'promotions' | 'sent' | 'drafts' | 'archived' | 'trash' = 'primary';
+  const labelIds = message.labelIds || [];
   
-  if (message.labelIds.includes('CATEGORY_SOCIAL')) {
+  if (labelIds.includes('CATEGORY_SOCIAL')) {
     emailCategory = 'social';
-  } else if (message.labelIds.includes('CATEGORY_PROMOTIONS')) {
+  } else if (labelIds.includes('CATEGORY_PROMOTIONS')) {
     emailCategory = 'promotions';
-  } else if (message.labelIds.includes('SENT')) {
+  } else if (labelIds.includes('SENT')) {
     emailCategory = 'sent';
-  } else if (message.labelIds.includes('DRAFT')) {
+  } else if (labelIds.includes('DRAFT')) {
     emailCategory = 'drafts';
   }
   
@@ -135,8 +188,8 @@ export const convertGmailToEmail = (message: GmailMessage): Email => {
     sender: sender || 'Unknown sender',
     preview: message.snippet || '',
     date: formattedDate,
-    read: !message.labelIds.includes('UNREAD'),
-    starred: message.labelIds.includes('STARRED'),
+    read: !labelIds.includes('UNREAD'),
+    starred: labelIds.includes('STARRED'),
     category: emailCategory
   };
 };

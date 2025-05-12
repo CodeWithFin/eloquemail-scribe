@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Button from '../ui-custom/Button';
 import Glass from '../ui-custom/Glass';
@@ -146,7 +145,7 @@ const AIToolbar: React.FC<AIToolbarProps> = ({ emailContent, onUpdate }) => {
                 <X size={16} />
               </Button>
             </div>
-            <div className="text-gray-700 text-sm mb-3 whitespace-pre-line">
+            <div className="text-gray-700 dark:text-gray-300 text-sm mb-3 whitespace-pre-line">
               {suggestion}
             </div>
             <div className="flex justify-end space-x-2">
@@ -172,13 +171,13 @@ const AIToolbar: React.FC<AIToolbarProps> = ({ emailContent, onUpdate }) => {
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center mr-2">
           <Wand2 size={18} className="text-eloquent-500 mr-1" />
-          <span className="text-sm font-medium text-gray-700">AI Tools:</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">AI Tools:</span>
         </div>
         
         <Button
           variant="ghost"
           size="sm"
-          className="py-1 px-3 text-sm rounded-full bg-gray-100 hover:bg-gray-200"
+          className="py-1 px-3 text-sm rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
           onClick={() => handleAIAction('generate')}
           loading={isLoadingAction}
           iconLeft={<Sparkles size={14} />}
@@ -189,7 +188,7 @@ const AIToolbar: React.FC<AIToolbarProps> = ({ emailContent, onUpdate }) => {
         <Button
           variant="ghost"
           size="sm"
-          className="py-1 px-3 text-sm rounded-full bg-gray-100 hover:bg-gray-200"
+          className="py-1 px-3 text-sm rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
           onClick={() => handleAIAction('improve')}
           loading={isLoadingAction}
           iconLeft={<ThumbsUp size={14} />}
@@ -200,7 +199,7 @@ const AIToolbar: React.FC<AIToolbarProps> = ({ emailContent, onUpdate }) => {
         <Button
           variant="ghost"
           size="sm"
-          className="py-1 px-3 text-sm rounded-full bg-gray-100 hover:bg-gray-200"
+          className="py-1 px-3 text-sm rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
           onClick={() => handleAIAction('formal')}
           loading={isLoadingAction}
           iconLeft={<FileText size={14} />}
@@ -211,7 +210,7 @@ const AIToolbar: React.FC<AIToolbarProps> = ({ emailContent, onUpdate }) => {
         <Button
           variant="ghost"
           size="sm"
-          className="py-1 px-3 text-sm rounded-full bg-gray-100 hover:bg-gray-200"
+          className="py-1 px-3 text-sm rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
           onClick={() => handleAIAction('casual')}
           loading={isLoadingAction}
           iconLeft={<Pencil size={14} />}
@@ -222,7 +221,7 @@ const AIToolbar: React.FC<AIToolbarProps> = ({ emailContent, onUpdate }) => {
         <Button
           variant="ghost"
           size="sm"
-          className="py-1 px-3 text-sm rounded-full bg-gray-100 hover:bg-gray-200"
+          className="py-1 px-3 text-sm rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
           onClick={() => handleAIAction('shorten')}
           loading={isLoadingAction}
           iconLeft={<Send size={14} />}

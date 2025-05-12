@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   isGmailAuthenticated,
@@ -82,7 +81,7 @@ const GmailConnect = () => {
 
   if (token && profile) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
+      <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-center justify-between">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <Check size={20} className="text-green-500" />
@@ -109,7 +108,7 @@ const GmailConnect = () => {
 
   if (isLoadingProfile) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <Mail size={20} className="text-gray-500 animate-pulse" />
@@ -129,7 +128,7 @@ const GmailConnect = () => {
       (profileError instanceof Error ? profileError.message : 'Unable to authenticate');
     
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <AlertCircle size={20} className="text-red-500" />
@@ -147,7 +146,7 @@ const GmailConnect = () => {
               <AlertTitle>Google OAuth Setup</AlertTitle>
               <AlertDescription>
                 <p className="mb-2">Make sure you've enabled the Gmail API in your Google Cloud project and set the correct redirect URI:</p>
-                <code className="bg-red-100 p-1 rounded block overflow-x-auto text-xs">
+                <code className="bg-red-100 dark:bg-red-900/50 p-1 rounded block overflow-x-auto text-xs">
                   {window.location.origin}/auth/callback/google
                 </code>
               </AlertDescription>
@@ -169,7 +168,7 @@ const GmailConnect = () => {
   }
 
   return (
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+    <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
           <h3 className="text-sm font-medium text-gray-800">

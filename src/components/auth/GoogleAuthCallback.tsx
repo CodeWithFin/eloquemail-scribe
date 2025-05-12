@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { handleGmailAuthCallback } from '@/services/gmail';
@@ -40,7 +39,7 @@ const GoogleAuthCallback = () => {
   }, [navigate, toast]);
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-gradient-to-b from-eloquent-50 to-gray-100">
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-gradient-to-b from-eloquent-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
       <div className="text-center">
         <Loader2 size={48} className="text-eloquent-500 animate-spin mx-auto" />
         <h2 className="mt-6 text-2xl font-semibold text-gray-900">

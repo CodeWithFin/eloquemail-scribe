@@ -54,7 +54,11 @@ export const useGmailMessages = (token: string | null) => {
     queryKey: ['gmailMessages', token, searchQuery],
     queryFn: () => token ? fetchGmailMessages(token, searchQuery) : Promise.reject('No token'),
     enabled: !!token,
-    refetchInterval: 60000, // Refetch every minute
+    refetchInterval: 300000, // Refetch every 5 minutes instead of every minute
+    staleTime: 120000, // Consider data fresh for 2 minutes
+    cacheTime: 3600000, // Cache for 1 hour
+    retry: 3, // Retry failed requests 3 times
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     select: (data) => data.map(convertGmailToEmail),
   });
 };

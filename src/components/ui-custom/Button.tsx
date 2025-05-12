@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { cn } from '@/lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'link';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'link' | 'accent' | 'destructive';
   size?: 'sm' | 'md' | 'lg';
   iconLeft?: React.ReactNode;
   iconRight?: React.ReactNode;
@@ -26,12 +25,14 @@ const Button = ({
 }: ButtonProps) => {
   const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-eloquent-400 focus:ring-opacity-50 active:scale-[0.98]';
   
-  const variantStyles = {
-    primary: 'bg-eloquent-500 hover:bg-eloquent-600 text-white shadow-md hover:shadow-lg',
-    secondary: 'bg-white hover:bg-gray-50 text-gray-800 shadow-sm hover:shadow border border-gray-200',
-    ghost: 'bg-transparent hover:bg-gray-100 text-gray-800',
-    outline: 'bg-transparent hover:bg-gray-50 text-gray-800 border border-gray-300',
-    link: 'bg-transparent text-eloquent-500 hover:underline p-0 shadow-none'
+  const variants = {
+    primary: 'bg-eloquent-500 hover:bg-eloquent-600 text-white',
+    secondary: 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm hover:shadow border border-gray-200 dark:border-gray-700',
+    accent: 'bg-indigo-600 hover:bg-indigo-700 text-white',
+    outline: 'bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600',
+    ghost: 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200',
+    link: 'p-0 bg-transparent text-eloquent-500 hover:underline',
+    destructive: 'bg-red-500 hover:bg-red-600 text-white',
   };
   
   const sizeStyles = {
@@ -46,7 +47,7 @@ const Button = ({
     <button
       className={cn(
         baseStyles,
-        variantStyles[variant],
+        variants[variant],
         !isLink && sizeStyles[size],
         fullWidth && 'w-full',
         (loading || disabled) && 'opacity-70 cursor-not-allowed',

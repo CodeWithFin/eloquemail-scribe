@@ -157,7 +157,7 @@ const Editor: React.FC<EditorProps> = ({
       )}
       
       {showSuggestion && (
-        <div className="mt-1 p-3 border border-gray-200 rounded-md bg-gray-50 relative">
+        <div className="mt-1 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 relative">
           <div className="text-gray-600">
             <span className="text-gray-400">{value}</span>
             <span className="font-medium">{suggestion}</span>

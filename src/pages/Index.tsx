@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Mail, Sparkles, Zap, Search, BarChart4 } from 'lucide-react';
@@ -9,7 +8,7 @@ import Footer from '../components/layout/Footer';
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
       <Header />
       
       {/* Hero Section */}
@@ -17,10 +16,10 @@ const Index = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div>
-              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">
+              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
                 Create Perfect Emails with <span className="text-eloquent-500">AI</span> Assistance
               </h1>
-              <p className="mt-6 text-xl text-gray-600">
+              <p className="mt-6 text-xl text-gray-600 dark:text-gray-300">
                 Email Buddy helps you write professional, engaging emails in seconds with advanced AI technology.
               </p>
             </div>
@@ -51,17 +50,17 @@ const Index = () => {
               opacity="medium"
               blur="xl"
             >
-              <div className="bg-gray-900/5 p-4 rounded-xl">
+              <div className="bg-gray-900/5 dark:bg-gray-300/5 p-4 rounded-xl">
                 <div className="space-y-4">
-                  <div className="h-12 flex items-center px-3 bg-white rounded-lg shadow-sm">
+                  <div className="h-12 flex items-center px-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
                     <Mail className="text-eloquent-500 mr-3" size={20} />
-                    <span className="text-gray-600">Write a professional email to...</span>
+                    <span className="text-gray-600 dark:text-gray-300">Write a professional email to...</span>
                   </div>
                   <div className="space-y-2">
-                    <div className="h-4 w-full bg-white rounded-full shadow-sm"></div>
-                    <div className="h-4 w-3/4 bg-white rounded-full shadow-sm"></div>
-                    <div className="h-4 w-5/6 bg-white rounded-full shadow-sm"></div>
-                    <div className="h-4 w-2/3 bg-white rounded-full shadow-sm"></div>
+                    <div className="h-4 w-full bg-white dark:bg-gray-800 rounded-full shadow-sm"></div>
+                    <div className="h-4 w-3/4 bg-white dark:bg-gray-800 rounded-full shadow-sm"></div>
+                    <div className="h-4 w-5/6 bg-white dark:bg-gray-800 rounded-full shadow-sm"></div>
+                    <div className="h-4 w-2/3 bg-white dark:bg-gray-800 rounded-full shadow-sm"></div>
                   </div>
                   <div className="flex justify-end">
                     <div className="h-10 w-32 bg-eloquent-500 rounded-lg shadow-sm"></div>
@@ -79,8 +78,8 @@ const Index = () => {
       {/* Features Section */}
       <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-900">Why Choose Email Buddy</h2>
-          <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Why Choose Email Buddy</h2>
+          <p className="mt-4 text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
             Our AI-powered platform helps you craft perfect emails faster than ever
           </p>
         </div>
@@ -112,10 +111,10 @@ const Index = () => {
           blur="xl"
         >
           <div className="max-w-3xl mx-auto space-y-8">
-            <h2 className="text-3xl font-bold text-gray-900">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               Ready to transform your email communication?
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-300">
               Join thousands of professionals using Email Buddy to save time and write better emails.
             </p>
             <Link to="/auth?signup=true">
@@ -143,11 +142,11 @@ const FeatureCard = ({ icon, title, description }) => {
       blur="lg"
     >
       <div className="space-y-4">
-        <div className="bg-eloquent-50 p-3 rounded-lg w-fit">
+        <div className="bg-eloquent-50 dark:bg-eloquent-950/30 p-3 rounded-lg w-fit">
           {icon}
         </div>
-        <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
-        <p className="text-gray-600">{description}</p>
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        <p className="text-gray-600 dark:text-gray-300">{description}</p>
       </div>
     </Glass>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -56,7 +55,7 @@ const AuthForm = () => {
             <span className="w-full border-t border-gray-300" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-gray-50 px-2 text-gray-500">Or continue with</span>
+            <span className="bg-gray-50 dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">Or continue with</span>
           </div>
         </div>
         

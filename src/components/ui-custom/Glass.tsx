@@ -37,7 +37,7 @@ const Glass = ({
         bgOpacityMap[opacity],
         blurMap[blur],
         border && 'border border-white border-opacity-20 dark:border-gray-800 dark:border-opacity-50',
-        'shadow-glass rounded-xl',
+        'shadow-glass dark:shadow-[0_4px_30px_rgba(0,0,0,0.3)] rounded-xl',
         className
       )}
       {...props}

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import AuthForm from '../components/auth/AuthForm';
 import { Sparkles } from 'lucide-react';
@@ -44,7 +43,7 @@ const Auth = () => {
         </div>
         
         {/* Auth form section */}
-        <div className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-12 bg-gray-50 relative overflow-hidden">
+        <div className="w-full md:w-1/2 flex items-center justify-center p-8 md:p-12 bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
           <div className="w-full max-w-md">
             <AuthForm />
           </div>
