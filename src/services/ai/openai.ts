@@ -1,18 +1,27 @@
 import OpenAI from 'openai';
 import { EmailDraft } from '../gmail/types';
 
-// Initialize OpenAI client - API key will be passed from environment variables
-// or can be set explicitly for development
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
-  dangerouslyAllowBrowser: true // Allow client-side usage (for development)
-});
+// Get OpenAI client with the current API key from localStorage
+const getOpenAIClient = () => {
+  const apiKey = localStorage.getItem('openai_api_key') || '';
+  const aiEnabled = localStorage.getItem('ai_features_enabled') === 'true';
+  
+  if (!apiKey || !aiEnabled) {
+    throw new Error('OpenAI API key not set or AI features are disabled. Please configure in Settings.');
+  }
+  
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true // Allow client-side usage (for development)
+  });
+};
 
 /**
  * Grammar and style corrections for email content
  */
 export const improveEmailText = async (text: string): Promise<string> => {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -41,6 +50,7 @@ export const improveEmailText = async (text: string): Promise<string> => {
  */
 export const generateSubjectLine = async (emailBody: string): Promise<string> => {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -69,6 +79,7 @@ export const generateSubjectLine = async (emailBody: string): Promise<string> =>
  */
 export const summarizeEmailThread = async (threadContent: string): Promise<string> => {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -100,6 +111,7 @@ export const adjustEmailTone = async (
   tone: 'formal' | 'friendly' | 'assertive' | 'concise' | 'persuasive'
 ): Promise<string> => {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -128,6 +140,7 @@ export const adjustEmailTone = async (
  */
 export const generateReplyOptions = async (emailContent: string): Promise<string[]> => {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -154,10 +167,133 @@ export const generateReplyOptions = async (emailContent: string): Promise<string
   }
 };
 
+/**
+ * Generate auto-reply for an email with specified parameters
+ */
+export const generateFullReply = async (
+  emailContent: string, 
+  options: { 
+    tone?: 'formal' | 'friendly' | 'assertive' | 'concise' | 'persuasive',
+    length?: 'short' | 'medium' | 'long',
+    context?: string,
+    includeIntro?: boolean,
+    includeOutro?: boolean
+  } = {}
+): Promise<string> => {
+  try {
+    const openai = getOpenAIClient();
+    
+    const defaultOptions = {
+      tone: 'friendly' as const,
+      length: 'medium' as const,
+      includeIntro: true,
+      includeOutro: true,
+      context: ''
+    };
+    
+    const settings = { ...defaultOptions, ...options };
+    
+    let systemPrompt = `You are an email assistant that generates complete email replies. 
+Generate a ${settings.length} length, ${settings.tone} tone response to the email.`;
+    
+    if (settings.includeIntro) {
+      systemPrompt += " Include an appropriate greeting.";
+    }
+    
+    if (settings.includeOutro) {
+      systemPrompt += " Include an appropriate closing.";
+    }
+    
+    systemPrompt += " The reply should sound natural and professional.";
+    
+    let userPrompt = `Generate a reply to this email: "${emailContent}"`;
+    
+    if (settings.context) {
+      userPrompt += `\n\nAdditional context to include in the reply: ${settings.context}`;
+    }
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: userPrompt
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: settings.length === 'short' ? 150 : (settings.length === 'medium' ? 300 : 500)
+    });
+
+    return response.choices[0]?.message?.content || "I'll get back to you soon.";
+  } catch (error) {
+    console.error('Error generating email reply:', error);
+    return "I'll get back to you soon.";
+  }
+};
+
+/**
+ * Analyze email sentiment and key points
+ */
+export const analyzeEmail = async (emailContent: string): Promise<{
+  sentiment: 'positive' | 'negative' | 'neutral',
+  keyPoints: string[],
+  actionItems: string[],
+  urgency: 'low' | 'medium' | 'high'
+}> => {
+  try {
+    const openai = getOpenAIClient();
+    
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: `Analyze the email and extract the following information in a JSON format:
+- sentiment: the overall tone of the email (positive, negative, or neutral)
+- keyPoints: an array of 2-5 key points from the email
+- actionItems: an array of any action items or requests in the email
+- urgency: how urgent the email seems (low, medium, or high)`
+        },
+        {
+          role: 'user',
+          content: `Analyze this email: "${emailContent}"`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+      response_format: { type: "json_object" }
+    });
+
+    const analysisText = response.choices[0]?.message?.content || '{}';
+    const analysis = JSON.parse(analysisText);
+    
+    return {
+      sentiment: analysis.sentiment || 'neutral',
+      keyPoints: analysis.keyPoints || [],
+      actionItems: analysis.actionItems || [],
+      urgency: analysis.urgency || 'low'
+    };
+  } catch (error) {
+    console.error('Error analyzing email:', error);
+    return {
+      sentiment: 'neutral',
+      keyPoints: [],
+      actionItems: [],
+      urgency: 'low'
+    };
+  }
+};
+
 export default {
   improveEmailText,
   generateSubjectLine,
   summarizeEmailThread,
   adjustEmailTone,
-  generateReplyOptions
+  generateReplyOptions,
+  generateFullReply,
+  analyzeEmail
 }; 

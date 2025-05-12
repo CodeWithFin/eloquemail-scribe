@@ -50,14 +50,12 @@ const AISettings: React.FC<AISettingsProps> = ({ onSave }) => {
       localStorage.setItem('openai_api_key', apiKey);
       localStorage.setItem('ai_features_enabled', isAIEnabled.toString());
       
-      // Update environment variable (this is a client-side approximation)
-      (window as any).process = (window as any).process || {};
-      (window as any).process.env = (window as any).process.env || {};
-      (window as any).process.env.OPENAI_API_KEY = apiKey;
+      // No need to update process.env as it won't persist - our OpenAI service now reads from localStorage directly
       
       toast({
         title: "Settings Saved",
-        description: "Your AI settings have been saved successfully",
+        description: "Your AI settings have been saved successfully. Please reload the page for changes to take effect.",
+        duration: 5000,
       });
       
       if (onSave) {

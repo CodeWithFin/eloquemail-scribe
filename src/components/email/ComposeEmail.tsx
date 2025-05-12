@@ -4,7 +4,8 @@ import { useSendGmailMessage, useCreateGmailDraft } from '@/services/gmail';
 import { 
   useImproveEmailText, 
   useGenerateSubjectLine, 
-  useAdjustEmailTone 
+  useAdjustEmailTone,
+  isAIConfigured
 } from '@/services/ai/hooks';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ import {
 } from 'lucide-react';
 import Editor from '../ui-custom/Editor';
 import { toast } from '@/hooks/use-toast';
+import AIFeatureGuide from '../ai/AIFeatureGuide';
 
 interface ComposeEmailProps {
   onCancel?: () => void;
@@ -229,6 +231,11 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <AIFeatureGuide 
+          title="Enhance Your Email with AI" 
+          description="Configure AI to access smart composition features" 
+        />
+        
         <div className="space-y-4">
           <div>
             <div className="flex justify-between items-center">
