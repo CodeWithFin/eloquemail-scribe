@@ -6,7 +6,7 @@ const GMAIL_SCOPES = [
 ].join(' ');
 
 // Using the Google client ID
-const CLIENT_ID = '465336393919-pfoeklk9pgp0nhei2hi7j5c5jodv0vsl.apps.googleusercontent.com';
+const CLIENT_ID = '32457214068-083cb4t6l4vm9rnps8heuqdpq4ug532l.apps.googleusercontent.com';
 // We'll use a dynamic redirect URI based on the current origin
 // This will work both locally and when deployed to Vercel
 
