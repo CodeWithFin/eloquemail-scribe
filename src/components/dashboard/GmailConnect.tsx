@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   isGmailAuthenticated,
-  useGmailAuth,
+  initiateGmailAuth,
   useGmailProfile,
   handleGmailAuthCallback 
 } from '@/services/gmail';
@@ -15,7 +15,7 @@ const GmailConnect = () => {
   const { toast } = useToast();
   const [token, setToken] = useState<string | null>(localStorage.getItem('gmail_token'));
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const { mutate: authenticate, isPending: isAuthenticating } = useGmailAuth();
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const { data: profile, isLoading: isLoadingProfile, error: profileError } = useGmailProfile(token);
 
   useEffect(() => {
@@ -52,19 +52,22 @@ const GmailConnect = () => {
     }
   }, [toast, token]);
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     setConnectionError(null); // Clear any previous errors
-    authenticate(undefined, {
-      onError: (error) => {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        setConnectionError(errorMessage);
-        toast({
-          title: "Connection failed",
-          description: `Failed to connect to Gmail: ${errorMessage}`,
-          variant: "destructive",
-        });
-      }
-    });
+    setIsAuthenticating(true);
+    
+    try {
+      await initiateGmailAuth();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setConnectionError(errorMessage);
+      toast({
+        title: "Connection failed",
+        description: `Failed to connect to Gmail: ${errorMessage}`,
+        variant: "destructive",
+      });
+      setIsAuthenticating(false);
+    }
   };
 
   const handleDisconnect = () => {
@@ -145,7 +148,7 @@ const GmailConnect = () => {
               <AlertDescription>
                 <p className="mb-2">Make sure you've enabled the Gmail API in your Google Cloud project and set the correct redirect URI:</p>
                 <code className="bg-red-100 p-1 rounded block overflow-x-auto text-xs">
-                  {window.location.origin}
+                  {window.location.origin}/auth/callback/google
                 </code>
               </AlertDescription>
             </Alert>
@@ -155,6 +158,7 @@ const GmailConnect = () => {
               size="sm"
               onClick={handleConnect}
               className="mt-2"
+              loading={isAuthenticating}
             >
               Try Again
             </Button>
