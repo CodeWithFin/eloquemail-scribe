@@ -460,8 +460,13 @@ const EmailView: React.FC<EmailViewProps> = ({ messageId, onBack }) => {
               />
             </TabsContent>
             <TabsContent value="summary">
-              <div className="prose max-w-none whitespace-pre-wrap">
-                {summary}
+              <div className="prose max-w-none whitespace-pre-wrap bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
+                {summary.split('\n').map((line, i) => (
+                  <React.Fragment key={i}>
+                    {line}
+                    <br />
+                  </React.Fragment>
+                ))}
               </div>
             </TabsContent>
           </Tabs>

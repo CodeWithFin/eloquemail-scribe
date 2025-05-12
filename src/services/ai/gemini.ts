@@ -169,45 +169,98 @@ export const summarizeEmailThread = async (threadContent: string): Promise<strin
   try {
     await new Promise(resolve => setTimeout(resolve, 1200));
     
-    // Strip HTML tags and CSS that might be in the email content
-    const strippedContent = threadContent
-      .replace(/<[^>]*>/g, '') // Remove HTML tags
-      .replace(/{[^}]*}/g, '') // Remove CSS
-      .replace(/\.[^{]*{[^}]*}/g, '') // Remove CSS selectors
+    // Create a temporary DOM element to help with HTML parsing
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = threadContent;
+    
+    // Extract text content - this properly handles HTML
+    let cleanText = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Additional cleanup for common email formatting artifacts
+    cleanText = cleanText
       .replace(/\s{2,}/g, ' ') // Remove extra spaces
       .replace(/mso-[^:;]*(:|;)/g, '') // Remove MSO specific content
-      .replace(/important;/g, '')
-      .replace(/overflow:[^;]*;/g, '');
+      .replace(/^\s*style.*?\{.*?\}/gmi, '') // Remove style blocks
+      .replace(/charset=("|')[^"']+("|')/g, '') // Remove charset declarations
+      .replace(/\n{3,}/g, '\n\n') // Normalize line breaks
+      .trim();
+    
+    // If we have very little text after cleanup, return a helpful message
+    if (cleanText.length < 30) {
+      return "This email appears to contain very little text content or primarily consists of formatting elements.";
+    }
     
     // Create a simplified summary by extracting key sentences
-    const sentences = strippedContent
+    const sentences = cleanText
       .split(/[.!?]+/)
-      .filter(s => s.trim().length > 10 && s.trim().length < 200) // Avoid very short or very long sentences
       .map(s => s.trim())
-      .filter(s => !s.includes('mso-') && !s.includes('charset=')); // Filter out remaining formatting content
+      .filter(s => s.length > 10 && s.length < 250) // Reasonable sentence length
+      .filter(s => !/^(https?:|www\.|@|<|>|\[|\]|\{|\})/.test(s)); // Filter out URLs and other non-sentence text
     
     // If we don't have enough valid sentences after filtering
-    if (sentences.length < 3) {
+    if (sentences.length < 2) {
       return "Email could not be summarized properly. It may contain complex formatting or limited text content.";
     }
     
-    // Select important sentences (first, middle, and last non-formatting sentences)
-    const firstSentence = sentences[0];
-    const middleSentence = sentences[Math.floor(sentences.length / 2)];
-    const lastSentence = sentences[sentences.length - 1];
+    // Select important sentences - prioritize the beginning, middle and end of the email
+    let keyPoints = [];
     
-    // Build a clean summary
-    const keyPoints = [firstSentence, middleSentence, lastSentence]
-      .filter(Boolean) // Remove any undefined
-      .filter((item, index, self) => self.indexOf(item) === index); // Remove duplicates
+    // Always include first sentence if it's meaningful
+    if (sentences[0] && !sentences[0].toLowerCase().includes('view this email in your browser')) {
+      keyPoints.push(sentences[0]);
+    }
     
-    const wordCount = strippedContent.split(/\s+/).length;
+    // Include an early sentence that's not a greeting
+    const earlyIndex = sentences.findIndex((s, i) => 
+      i > 0 && i < Math.min(5, sentences.length) && 
+      !/^(hi|hello|dear|hey|greetings)/i.test(s)
+    );
+    
+    if (earlyIndex !== -1) {
+      keyPoints.push(sentences[earlyIndex]);
+    }
+    
+    // Include a sentence from the middle
+    const middleIndex = Math.floor(sentences.length / 2);
+    if (sentences[middleIndex] && keyPoints.indexOf(sentences[middleIndex]) === -1) {
+      keyPoints.push(sentences[middleIndex]);
+    }
+    
+    // Include a sentence from near the end, but not a signature
+    const endIndex = sentences.findIndex((s, i) => 
+      i > Math.max(sentences.length - 5, 0) && 
+      i < sentences.length - 1 &&
+      !/^(thanks|thank you|regards|sincerely|best)/i.test(s)
+    );
+    
+    if (endIndex !== -1) {
+      keyPoints.push(sentences[endIndex]);
+    }
+    
+    // Remove duplicates
+    keyPoints = keyPoints.filter((item, index, self) => 
+      self.indexOf(item) === index
+    );
+    
+    // Make sure we have at least some key points
+    if (keyPoints.length === 0) {
+      // If we couldn't extract meaningful sentences, take the first few non-trivial ones
+      keyPoints = sentences
+        .filter(s => s.length > 20)
+        .slice(0, 3);
+    }
+    
+    // Calculate metadata
+    const wordCount = cleanText.split(/\s+/).length;
     
     let summary = "Summary of Email:\n\n";
     
     // Add key points
     keyPoints.forEach(point => {
-      summary += `• ${point}.\n\n`;
+      if (!point.endsWith('.') && !point.endsWith('!') && !point.endsWith('?')) {
+        point += '.';
+      }
+      summary += `• ${point}\n\n`;
     });
     
     // Add metadata
