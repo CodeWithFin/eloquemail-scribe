@@ -1,9 +1,10 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from "@/hooks/use-toast";
-import { fetchGmailProfile, fetchGmailMessages, starGmailMessage, markGmailMessageAsRead } from './api';
+import { fetchGmailProfile, fetchGmailMessages, starGmailMessage, markGmailMessageAsRead, convertGmailToEmail } from './api';
 import { initiateGmailAuth, getGmailToken } from './auth';
 import { GmailMessage } from './types';
+import { Email } from '../emailService';
 
 /**
  * Hook for initiating Gmail authentication
@@ -38,11 +39,15 @@ export const useGmailProfile = (token: string | null) => {
  * Hook for fetching Gmail messages
  */
 export const useGmailMessages = (token: string | null) => {
+  const queryClient = useQueryClient();
+  const searchQuery = queryClient.getQueryData(['emailSearch']) as string | undefined;
+  
   return useQuery({
-    queryKey: ['gmailMessages', token],
-    queryFn: () => token ? fetchGmailMessages(token) : Promise.reject('No token'),
+    queryKey: ['gmailMessages', token, searchQuery],
+    queryFn: () => token ? fetchGmailMessages(token, searchQuery) : Promise.reject('No token'),
     enabled: !!token,
     refetchInterval: 60000, // Refetch every minute
+    select: (data) => data.map(convertGmailToEmail),
   });
 };
 

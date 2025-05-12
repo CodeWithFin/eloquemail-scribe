@@ -1,5 +1,6 @@
 
 import { GmailProfile, GmailMessage } from './types';
+import { Email } from '../emailService';
 
 /**
  * Fetch user profile from Gmail API
@@ -19,11 +20,17 @@ export const fetchGmailProfile = async (token: string): Promise<GmailProfile> =>
 };
 
 /**
- * Fetch messages from Gmail API
+ * Fetch messages from Gmail API with optional search query
  */
-export const fetchGmailMessages = async (token: string): Promise<GmailMessage[]> => {
-  // First get message IDs (max 50)
-  const listResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50', {
+export const fetchGmailMessages = async (token: string, searchQuery?: string): Promise<GmailMessage[]> => {
+  // Build query string
+  let queryParams = 'maxResults=50';
+  if (searchQuery) {
+    queryParams += `&q=${encodeURIComponent(searchQuery)}`;
+  }
+  
+  // First get message IDs
+  const listResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${queryParams}`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
@@ -102,7 +109,7 @@ export const markGmailMessageAsRead = async (id: string, token: string): Promise
 /**
  * Convert a Gmail message to our application's email format
  */
-export const convertGmailToEmail = (message: GmailMessage) => {
+export const convertGmailToEmail = (message: GmailMessage): Email => {
   const fromHeader = message.payload?.headers.find(h => h.name === 'From')?.value || '';
   const subjectHeader = message.payload?.headers.find(h => h.name === 'Subject')?.value || '';
   const dateHeader = message.payload?.headers.find(h => h.name === 'Date')?.value || '';
@@ -111,19 +118,23 @@ export const convertGmailToEmail = (message: GmailMessage) => {
   const date = new Date(dateHeader);
   const formattedDate = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   
-  let emailCategory: 'primary' | 'social' | 'promotions' = 'primary';
+  let emailCategory: 'primary' | 'social' | 'promotions' | 'sent' | 'drafts' | 'archived' | 'trash' = 'primary';
   
   if (message.labelIds.includes('CATEGORY_SOCIAL')) {
     emailCategory = 'social';
   } else if (message.labelIds.includes('CATEGORY_PROMOTIONS')) {
     emailCategory = 'promotions';
+  } else if (message.labelIds.includes('SENT')) {
+    emailCategory = 'sent';
+  } else if (message.labelIds.includes('DRAFT')) {
+    emailCategory = 'drafts';
   }
   
   return {
     id: message.id,
-    subject: subjectHeader,
-    sender: sender,
-    preview: message.snippet,
+    subject: subjectHeader || '(No subject)',
+    sender: sender || 'Unknown sender',
+    preview: message.snippet || '',
     date: formattedDate,
     read: !message.labelIds.includes('UNREAD'),
     starred: message.labelIds.includes('STARRED'),

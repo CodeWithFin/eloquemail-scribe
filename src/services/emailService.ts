@@ -1,12 +1,11 @@
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
-  convertAurinkoToEmail, 
-  useAurinkoMessages, 
-  useStarAurinkoMessage, 
-  useMarkAurinkoMessageAsRead,
-  isAurinkoAuthenticated
-} from './aurinko';
+  useGmailMessages, 
+  useStarGmailMessage, 
+  useMarkGmailMessageAsRead,
+  isGmailAuthenticated
+} from './gmail';
 
 export interface Email {
   id: string;
@@ -16,14 +15,11 @@ export interface Email {
   date: string;
   read: boolean;
   starred: boolean;
-  category?: 'primary' | 'social' | 'promotions';
+  category?: 'primary' | 'social' | 'promotions' | 'sent' | 'drafts' | 'archived' | 'trash';
 }
 
-// We'll use this flag to determine if we're using mock data or real email
-const isUsingAurinko = isAurinkoAuthenticated();
-
 // This function would be replaced with actual API calls in a production app
-const fetchEmails = async (): Promise<Email[]> => {
+const fetchMockEmails = async (): Promise<Email[]> => {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 1500));
   
@@ -38,103 +34,50 @@ const fetchEmails = async (): Promise<Email[]> => {
 };
 
 export const useEmails = () => {
-  const token = localStorage.getItem('aurinko_token');
-  const aurinkoQuery = useAurinkoMessages(token);
+  const token = localStorage.getItem('gmail_token');
+  const gmailQuery = useGmailMessages(token);
   
   const mockEmailsQuery = useQuery({
-    queryKey: ['emails'],
-    queryFn: fetchEmails,
+    queryKey: ['mockEmails'],
+    queryFn: fetchMockEmails,
     refetchInterval: 30000, // Refetch every 30 seconds
-    enabled: !isUsingAurinko,
+    enabled: !isGmailAuthenticated(),
   });
   
-  // If we have an Aurinko token, use Aurinko data, otherwise use mock data
-  if (isUsingAurinko && token) {
-    return {
-      ...aurinkoQuery,
-      data: aurinkoQuery.data?.map(convertAurinkoToEmail) as Email[] || []
-    };
+  // If we have a Gmail token, use Gmail data, otherwise use mock data
+  if (isGmailAuthenticated() && token) {
+    return gmailQuery;
   }
   
   return mockEmailsQuery;
 };
 
-export const starEmail = async (id: string, starred: boolean): Promise<void> => {
-  if (isUsingAurinko) {
-    const mutation = useStarAurinkoMessage();
-    await mutation.mutateAsync({ id, starred });
-    return;
-  }
-  
-  // In a real app, this would call an API endpoint
-  console.log(`Marking email ${id} as ${starred ? 'starred' : 'unstarred'}`);
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 500));
-};
-
-export const markAsRead = async (id: string): Promise<void> => {
-  if (isUsingAurinko) {
-    const mutation = useMarkAurinkoMessageAsRead();
-    await mutation.mutateAsync(id);
-    return;
-  }
-  
-  // In a real app, this would call an API endpoint
-  console.log(`Marking email ${id} as read`);
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 300));
-};
-
-// Hook to handle starring emails
 export const useStarEmail = () => {
-  const queryClient = useQueryClient();
-  const token = localStorage.getItem('aurinko_token');
-  
-  // If we have an Aurinko token, use the Aurinko star mutation
-  if (isUsingAurinko && token) {
-    return useStarAurinkoMessage();
+  // If we have a Gmail token, use the Gmail star mutation
+  if (isGmailAuthenticated()) {
+    return useStarGmailMessage();
   }
   
+  // Return a mock implementation for demonstration
   return useMutation({
-    mutationFn: ({ id, starred }: { id: string; starred: boolean }) => starEmail(id, starred),
-    onMutate: async ({ id, starred }) => {
-      // Optimistic update
-      queryClient.setQueryData(['emails'], (oldData: any) => 
-        oldData ? oldData.map((email: Email) => 
-          email.id === id ? { ...email, starred } : email
-        ) : []
-      );
-    },
-    onError: () => {
-      // Revert on error via refetch
-      queryClient.invalidateQueries({ queryKey: ['emails'] });
+    mutationFn: ({ id, starred }: { id: string; starred: boolean }) => {
+      console.log(`Mock: Marking email ${id} as ${starred ? 'starred' : 'unstarred'}`);
+      return Promise.resolve();
     }
   });
 };
 
-// Hook to handle marking emails as read
 export const useMarkAsRead = () => {
-  const queryClient = useQueryClient();
-  const token = localStorage.getItem('aurinko_token');
-  
-  // If we have an Aurinko token, use the Aurinko mark as read mutation
-  if (isUsingAurinko && token) {
-    return useMarkAurinkoMessageAsRead();
+  // If we have a Gmail token, use the Gmail mark as read mutation
+  if (isGmailAuthenticated()) {
+    return useMarkGmailMessageAsRead();
   }
   
+  // Return a mock implementation for demonstration
   return useMutation({
-    mutationFn: (id: string) => markAsRead(id),
-    onMutate: async (id) => {
-      // Optimistic update
-      queryClient.setQueryData(['emails'], (oldData: any) => 
-        oldData ? oldData.map((email: Email) => 
-          email.id === id ? { ...email, read: true } : email
-        ) : []
-      );
-    },
-    onError: () => {
-      // Revert on error via refetch
-      queryClient.invalidateQueries({ queryKey: ['emails'] });
+    mutationFn: (id: string) => {
+      console.log(`Mock: Marking email ${id} as read`);
+      return Promise.resolve();
     }
   });
 };
