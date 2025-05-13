@@ -125,4 +125,4 @@ const EmailPrioritizer: React.FC = () => {
   );
 };
 
-export default EmailPrioritizer; 
+export default EmailPrioritizer; // Updated for Vercel build
