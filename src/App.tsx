@@ -12,6 +12,7 @@ import Compose from "./pages/Compose";
 import ViewEmail from "./pages/ViewEmail";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import AIEmailTools from "./pages/AIEmailTools";
 import GoogleAuthCallback from "./components/auth/GoogleAuthCallback";
 
 // Create a new QueryClient instance properly
@@ -40,6 +41,7 @@ const App: React.FC = () => {
                 <Route path="/compose" element={<Compose />} />
                 <Route path="/email/:messageId" element={<ViewEmail />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/ai-tools" element={<AIEmailTools />} />
                 <Route path="/auth/callback/google" element={<GoogleAuthCallback />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

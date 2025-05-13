@@ -122,7 +122,7 @@ const Dashboard = () => {
   }, [filteredEmails]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto animate-fade-up space-y-8">
+    <div className="w-full max-w-full mx-auto animate-fade-up space-y-8">
       <div className="flex flex-col lg:flex-row justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Email Dashboard</h1>
@@ -151,7 +151,7 @@ const Dashboard = () => {
         </div>
         
         {/* Email list */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <Glass className="overflow-hidden" opacity="light">
             <EmailHeader 
               activeTab={activeTab} 

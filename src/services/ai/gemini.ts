@@ -667,6 +667,123 @@ export const generateTextCompletion = async (text: string): Promise<string> => {
   }
 };
 
+/**
+ * Generate smart reply suggestions for an email
+ */
+export const generateSmartReplies = async (emailContent: string): Promise<string[]> => {
+  try {
+    // Simulate AI processing time
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Default smart replies for demo purposes
+    const replies = [
+      "Thank you for sharing this information. I'll review it and get back to you with my thoughts soon.",
+      "I appreciate your email. Let's schedule a call to discuss this in more detail at your convenience.",
+      "Thanks for reaching out. I've noted your request and will prioritize it accordingly."
+    ];
+    
+    // Conditionally generate different replies based on content patterns
+    if (emailContent.match(/meeting|schedule|appointment|call/i)) {
+      return [
+        "I'd be happy to meet. How about Tuesday at 2pm?",
+        "Thanks for suggesting a meeting. I'm available this Thursday afternoon if that works for you.",
+        "I can make time for a quick call tomorrow. Would 10am work for you?"
+      ];
+    }
+    
+    if (emailContent.match(/question|help|assist|advice/i)) {
+      return [
+        "I'd be happy to help with this. Let me look into it and get back to you by tomorrow.",
+        "Thanks for your question. Based on my experience, I would recommend...",
+        "Great question. Let me connect you with our specialist who can provide more detailed information."
+      ];
+    }
+    
+    if (emailContent.match(/urgent|asap|emergency|immediate/i)) {
+      return [
+        "I'll address this right away. Give me 30 minutes to resolve this issue.",
+        "I understand the urgency. I've prioritized this and will call you shortly to discuss.",
+        "Thank you for flagging this urgent matter. I'm working on it now and will update you soon."
+      ];
+    }
+    
+    return replies;
+  } catch (error) {
+    console.error('Error generating smart replies:', error);
+    throw new Error('Unable to generate smart replies');
+  }
+};
+
+/**
+ * Summarize an email briefly
+ */
+export const summarizeEmailBriefly = async (emailContent: string): Promise<string> => {
+  try {
+    // Simulate AI processing time
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    
+    // Default summary for demo purposes
+    let summary = "This email discusses project updates and requests feedback on the proposed timeline.";
+    
+    // Generate different summaries based on content patterns
+    if (emailContent.match(/meeting|schedule|appointment|call/i)) {
+      summary = "Request to schedule a meeting to discuss project progress and next steps.";
+    } else if (emailContent.match(/proposal|budget|cost|price/i)) {
+      summary = "Proposal with pricing details and budget considerations for the project.";
+    } else if (emailContent.match(/deadline|timeline|delay/i)) {
+      summary = "Update on project timeline with revised deadlines and explanation for changes.";
+    } else if (emailContent.match(/report|performance|metrics|results/i)) {
+      summary = "Monthly performance report showing key metrics and results analysis.";
+    } else if (emailContent.match(/issue|problem|error|fix/i)) {
+      summary = "Details about technical issues encountered and proposed solutions.";
+    }
+    
+    return summary;
+  } catch (error) {
+    console.error('Error summarizing email:', error);
+    throw new Error('Unable to summarize email');
+  }
+};
+
+/**
+ * Prioritize an email based on content analysis
+ */
+export const prioritizeEmail = async (emailContent: string): Promise<{
+  priority: 'High' | 'Medium' | 'Low';
+  justification: string;
+}> => {
+  try {
+    // Simulate AI processing time
+    await new Promise(resolve => setTimeout(resolve, 900));
+    
+    // Default result
+    let result = {
+      priority: 'Medium' as const,
+      justification: "Standard business communication with no urgent elements."
+    };
+    
+    // Check for high priority indicators
+    if (emailContent.match(/urgent|asap|emergency|immediate|critical|deadline today/i)) {
+      result = {
+        priority: 'High',
+        justification: "Contains urgent language and time-sensitive requests requiring immediate attention."
+      };
+    }
+    // Check for low priority indicators
+    else if (emailContent.match(/fyi|newsletter|announcement|heads up|no action required/i)) {
+      result = {
+        priority: 'Low',
+        justification: "Informational content with no action required or time sensitivity."
+      };
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error prioritizing email:', error);
+    throw new Error('Unable to prioritize email');
+  }
+};
+
 export default {
   improveEmailText,
   generateSubjectLine,
@@ -676,5 +793,8 @@ export default {
   generateFullReply,
   analyzeEmail,
   generateEmailContent,
-  generateTextCompletion
+  generateTextCompletion,
+  generateSmartReplies,
+  summarizeEmailBriefly,
+  prioritizeEmail
 }; 

@@ -8,7 +8,7 @@ import Footer from '../components/layout/Footer';
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 overflow-hidden">
       <Header />
       
       {/* Hero Section */}
@@ -44,9 +44,9 @@ const Index = () => {
             </div>
           </div>
           
-          <div className="relative">
+          <div className="relative max-w-full">
             <Glass 
-              className="p-6 rounded-2xl shadow-xl transform lg:translate-x-10"
+              className="p-6 rounded-2xl shadow-xl transform lg:translate-x-0"
               opacity="medium"
               blur="xl"
             >

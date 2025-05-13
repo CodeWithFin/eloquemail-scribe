@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Button from '../ui-custom/Button';
-import { Menu, X, Settings } from 'lucide-react';
+import { Menu, X, Settings, Sparkles } from 'lucide-react';
 import { ThemeToggle } from '../ui/theme-toggle';
 
 const Header = () => {
@@ -45,77 +45,82 @@ const Header = () => {
                     location.pathname.includes('/compose');
 
   return (
-    <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'py-3 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-sm' : 'py-5 bg-transparent'
-      }`}
-    >
-      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center">
-          <Link to="/" className="flex items-center">
-            <span className="text-2xl font-bold text-eloquent-800 dark:text-white">
-              Email Buddy
-              <span className="text-eloquent-500">.</span>
-            </span>
+    <header className={`fixed w-full z-50 transition-all duration-300 ${isScrolled ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm' : 'bg-transparent'}`}>
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <Link to={isLoggedIn ? '/dashboard' : '/'} className="flex items-center">
+            <span className="text-2xl font-bold text-eloquent-500">Email <span className="text-gray-900 dark:text-white">Buddy</span></span>
           </Link>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          
+          {/* Desktop navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
             {!isLoggedIn && navLinks.map((link) => (
               <a
                 key={link.name}
                 href={link.path}
-                className="text-gray-700 dark:text-gray-300 hover:text-eloquent-500 dark:hover:text-eloquent-400 transition-colors font-medium"
+                className="text-gray-700 dark:text-gray-300 hover:text-eloquent-500 dark:hover:text-eloquent-400 transition-colors"
               >
                 {link.name}
               </a>
             ))}
             
-            {isLoggedIn ? (
-              <div className="flex items-center space-x-4">
-                <Link to="/dashboard">
-                  <Button variant="ghost">Dashboard</Button>
-                </Link>
-                <Link to="/compose">
-                  <Button>New Email</Button>
-                </Link>
-                <Link to="/settings" title="Settings">
-                  <Button variant="ghost" size="sm" className="p-2">
-                    <Settings size={20} />
-                  </Button>
-                </Link>
-                <ThemeToggle />
-              </div>
-            ) : (
-              <div className="flex items-center space-x-4">
-                <Link to="/auth">
-                  <Button variant="ghost">Sign in</Button>
-                </Link>
-                <Link to="/auth?signup=true">
-                  <Button>Get Started</Button>
-                </Link>
-                <ThemeToggle />
-              </div>
-            )}
+            <div className="flex items-center space-x-2 pl-4 border-l border-gray-200 dark:border-gray-800">
+              <ThemeToggle />
+              
+              {isLoggedIn ? (
+                <div className="flex items-center space-x-2">
+                  <Link to="/dashboard">
+                    <Button variant="ghost" size="sm">Dashboard</Button>
+                  </Link>
+                  <Link to="/compose">
+                    <Button size="sm">New Email</Button>
+                  </Link>
+                  <Link to="/ai-tools">
+                    <Button variant="ghost" size="sm">
+                      <Sparkles className="h-4 w-4 mr-1" />
+                      AI Tools
+                    </Button>
+                  </Link>
+                  <Link to="/settings">
+                    <Button variant="ghost" size="sm" className="p-2 ml-2">
+                      <Settings className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Link to="/auth">
+                    <Button variant="ghost" size="sm">Sign in</Button>
+                  </Link>
+                  <Link to="/auth?signup=true">
+                    <Button size="sm">Get Started</Button>
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center space-x-2">
+          
+          {/* Mobile menu button */}
+          <div className="flex items-center md:hidden space-x-4">
             <ThemeToggle />
-            <button 
-              className="text-gray-700 dark:text-gray-300 hover:text-eloquent-500 dark:hover:text-eloquent-400 transition-colors"
+            <button
               onClick={toggleMobileMenu}
-              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              className="text-gray-700 dark:text-gray-300 hover:text-eloquent-500 dark:hover:text-eloquent-400"
             >
-              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </button>
           </div>
         </div>
       </div>
-
-      {/* Mobile Menu */}
+      
+      {/* Mobile navigation menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white dark:bg-gray-900 shadow-lg animate-fade-in">
+        <div className="md:hidden bg-white dark:bg-gray-900 shadow-lg animate-fade-in overflow-hidden">
           <div className="container mx-auto px-4 py-4">
             <nav className="flex flex-col space-y-4">
               {!isLoggedIn && navLinks.map((link) => (
@@ -135,6 +140,12 @@ const Header = () => {
                   </Link>
                   <Link to="/compose" className="w-full">
                     <Button fullWidth>New Email</Button>
+                  </Link>
+                  <Link to="/ai-tools" className="w-full">
+                    <Button variant="ghost" fullWidth>
+                      <Sparkles className="h-4 w-4 mr-1" />
+                      AI Tools
+                    </Button>
                   </Link>
                   <Link to="/settings" className="w-full">
                     <Button variant="ghost" fullWidth>Settings</Button>

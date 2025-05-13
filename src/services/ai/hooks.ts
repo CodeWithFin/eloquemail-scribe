@@ -254,6 +254,93 @@ export const useAnalyzeEmail = () => {
   });
 };
 
+/**
+ * Hook for generating smart reply suggestions
+ */
+export const useGenerateSmartReplies = () => {
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (emailContent: string) => {
+      if (!isAIConfigured()) {
+        toast({
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
+          variant: "destructive",
+        });
+        return ["Please enable AI features in Settings"];
+      }
+      return await geminiService.generateSmartReplies(emailContent);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error generating smart replies",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+};
+
+/**
+ * Hook for summarizing an email briefly
+ */
+export const useSummarizeEmailBriefly = () => {
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (emailContent: string) => {
+      if (!isAIConfigured()) {
+        toast({
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
+          variant: "destructive",
+        });
+        return "Please enable AI features in Settings";
+      }
+      return await geminiService.summarizeEmailBriefly(emailContent);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error summarizing email",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+};
+
+/**
+ * Hook for prioritizing an email
+ */
+export const usePrioritizeEmail = () => {
+  const { toast } = useToast();
+  
+  return useMutation({
+    mutationFn: async (emailContent: string) => {
+      if (!isAIConfigured()) {
+        toast({
+          title: "AI Features Disabled",
+          description: "Please enable AI features in Settings",
+          variant: "destructive",
+        });
+        return {
+          priority: 'Medium' as const,
+          justification: "Please enable AI features in Settings"
+        };
+      }
+      return await geminiService.prioritizeEmail(emailContent);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error prioritizing email",
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+};
+
 export default {
   useImproveEmailText,
   useGenerateSubjectLine,
@@ -263,5 +350,8 @@ export default {
   useGenerateReplyOptions,
   useGenerateFullReply,
   useAnalyzeEmail,
+  useGenerateSmartReplies,
+  useSummarizeEmailBriefly,
+  usePrioritizeEmail,
   isAIConfigured
 }; 
