@@ -3,7 +3,7 @@ import { usePrioritizeEmail } from '@/services/ai/hooks';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, AlertCircle, ChevronDoubleUp, Clock, Flag, Info } from "lucide-react";
+import { RefreshCw, AlertCircle, ArrowUp, Clock, Flag, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -44,7 +44,7 @@ const EmailPrioritizer: React.FC = () => {
       case 'High':
         return (
           <Badge className="bg-red-500">
-            <ChevronDoubleUp className="h-3 w-3 mr-1" />
+            <ArrowUp className="h-3 w-3 mr-1" />
             High Priority
           </Badge>
         );
