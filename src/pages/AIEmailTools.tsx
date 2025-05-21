@@ -40,7 +40,7 @@ const AIEmailTools: React.FC = () => {
                 <span className="text-2xl">📩</span>
               </div>
               <h3 className="font-medium mb-1">Email Summarizer</h3>
-              <p className="text-sm text-gray-500">Extract key points and summarize emails</p>
+              <p className="text-sm text-gray-500">Create clear, professional email summaries</p>
             </div>
             <div className="p-4 border rounded-lg flex flex-col items-center text-center">
               <div className="h-12 w-12 bg-eloquent-100 dark:bg-eloquent-900/30 rounded-full flex items-center justify-center mb-3">

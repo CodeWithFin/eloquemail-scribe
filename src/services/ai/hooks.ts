@@ -1,6 +1,70 @@
 import { useMutation } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import geminiService from './gemini';
+import { type EmailAnalysis, type EmailGenerationOptions, type GeneratedReply, type Deadline } from './types';
+import cacheService from './cacheService';
+import loggingService from './loggingService';
+import errorHandling from './errorHandling';
+
+// Update the interface to match the GeneratedReply type
+interface GeneratedEmailReply {
+  text: string;
+  metadata: {
+    questionsAddressed: string[];
+    actionItemsIncluded: string[];
+    deadlinesReferenced: Deadline[];
+    confidence: number;
+    requiresHumanReview: boolean;
+    reviewReason?: string;
+  };
+}
+
+/**
+ * Helper function to ensure deadline dates are properly converted to Date objects
+ */
+const ensureDeadlineDates = (deadlines: any[]): Deadline[] => {
+  return deadlines.map(deadline => ({
+    text: deadline.text,
+    date: deadline.date instanceof Date ? deadline.date : 
+          deadline.date ? new Date(deadline.date) : null
+  }));
+};
+
+/**
+ * Wrapper for geminiService.analyzeEmail that ensures date fields are properly formatted
+ */
+const safeAnalyzeEmail = async (content: string): Promise<EmailAnalysis> => {
+  // Use the error handling service's safelyAnalyzeEmail function
+  const wrappedAnalyzeEmail = async (emailContent: string): Promise<EmailAnalysis> => {
+    const result = await geminiService.analyzeEmail(emailContent);
+    return {
+      ...result,
+      deadlines: ensureDeadlineDates(result.deadlines),
+      timestamp: result.timestamp instanceof Date ? result.timestamp : new Date(result.timestamp)
+    };
+  };
+  
+  return errorHandling.safelyAnalyzeEmail(wrappedAnalyzeEmail, content);
+};
+
+/**
+ * Wrapper for geminiService.generateFullReply that ensures date fields are properly formatted
+ */
+const safeGenerateFullReply = async (content: string, options: any): Promise<GeneratedReply> => {
+  // Use the error handling service's safelyGenerateFullReply function
+  const wrappedGenerateFullReply = async (emailContent: string, opts: any): Promise<GeneratedReply> => {
+    const result = await geminiService.generateFullReply(emailContent, opts);
+    return {
+      text: result.text,
+      metadata: {
+        ...result.metadata,
+        deadlinesReferenced: ensureDeadlineDates(result.metadata.deadlinesReferenced)
+      }
+    };
+  };
+  
+  return errorHandling.safelyGenerateFullReply(wrappedGenerateFullReply, content, options);
+};
 
 /**
  * Utility function to check if AI features are properly configured
@@ -167,9 +231,72 @@ export const useGenerateReplyOptions = () => {
           description: "Please enable AI features in Settings",
           variant: "destructive",
         });
-        return ["Please enable AI features in Settings"];
+        return {
+          replies: ["Please enable AI features in Settings"],
+          id: null
+        };
       }
-      return await geminiService.generateReplyOptions(emailContent);
+      
+      // Check cache first
+      const cachedReplies = cacheService.getCachedSmartReplies(emailContent);
+      if (cachedReplies) {
+        return {
+          replies: cachedReplies,
+          id: null // No ID for cached replies as they weren't logged
+        };
+      }
+      
+      try {
+        // First analyze the email to get context
+        let analysis: EmailAnalysis;
+        const cachedAnalysis = cacheService.getCachedEmailAnalysis(emailContent);
+        
+        if (cachedAnalysis) {
+          analysis = cachedAnalysis;
+        } else {
+          analysis = await safeAnalyzeEmail(emailContent);
+          cacheService.cacheEmailAnalysis(emailContent, analysis);
+        }
+        
+        // Generate smart replies with error handling
+        const replies = await errorHandling.safelyGenerateSmartReplies(
+          geminiService.generateSmartReplies,
+          emailContent
+        );
+        
+        // Cache the replies
+        cacheService.cacheSmartReplies(emailContent, replies, analysis);
+        
+        // Log this auto-reply generation for quality review
+        const replyObj: GeneratedReply = {
+          text: replies.join('\n\n'),
+          metadata: {
+            questionsAddressed: analysis.questions,
+            actionItemsIncluded: analysis.actionItems,
+            deadlinesReferenced: analysis.deadlines,
+            confidence: analysis.metadata.confidence,
+            requiresHumanReview: analysis.metadata.requiresHumanReview,
+            reviewReason: analysis.metadata.reviewReason
+          }
+        };
+        
+        // Log the smart reply generation and get the ID
+        const replyId = loggingService.logAutoReply(
+          emailContent,
+          analysis,
+          replyObj,
+          analysis.subject,
+          analysis.sender.email
+        );
+        
+        return {
+          replies,
+          id: replyId
+        };
+      } catch (error) {
+        console.error('Error generating smart replies:', error);
+        throw error;
+      }
     },
     onError: (error) => {
       toast({
@@ -180,6 +307,8 @@ export const useGenerateReplyOptions = () => {
     }
   });
 };
+
+// Using GeneratedReply type from imports
 
 /**
  * Hook for generating a full email reply
@@ -193,23 +322,81 @@ export const useGenerateFullReply = () => {
       options 
     }: { 
       emailContent: string; 
-      options?: { 
-        tone?: 'formal' | 'friendly' | 'assertive' | 'concise' | 'persuasive';
-        length?: 'short' | 'medium' | 'long';
-        context?: string;
-        includeIntro?: boolean;
-        includeOutro?: boolean;
-      } 
-    }) => {
+      options?: EmailGenerationOptions 
+    }): Promise<GeneratedEmailReply & { id?: string }> => {
       if (!isAIConfigured()) {
         toast({
           title: "AI Features Disabled",
           description: "Please enable AI features in Settings",
           variant: "destructive",
         });
-        return "Please enable AI features in Settings";
+        return {
+          text: "Please enable AI features in Settings",
+          metadata: {
+            questionsAddressed: [],
+            actionItemsIncluded: [],
+            deadlinesReferenced: [],
+            confidence: 0,
+            requiresHumanReview: true,
+            reviewReason: 'AI features are disabled'
+          },
+          id: undefined
+        };
       }
-      return await geminiService.generateFullReply(emailContent, options || {});
+      
+      // Check cache first with options considered
+      const cachedReply = cacheService.getCachedFullReply(emailContent, options);
+      if (cachedReply) {
+        // Convert the cached reply to match the expected return type
+        return {
+          ...cachedReply,
+          metadata: {
+            ...cachedReply.metadata,
+            deadlinesReferenced: ensureDeadlineDates(cachedReply.metadata.deadlinesReferenced)
+          }
+        };
+      }
+
+      try {
+        // For accurate replies, first analyze the email if not already cached
+        let analysis: EmailAnalysis;
+        const cachedAnalysis = cacheService.getCachedEmailAnalysis(emailContent);
+        
+        if (cachedAnalysis) {
+          analysis = cachedAnalysis;
+        } else {
+          analysis = await safeAnalyzeEmail(emailContent);
+          cacheService.cacheEmailAnalysis(emailContent, analysis);
+        }
+        
+        // Generate the full reply with error handling
+        const reply = await safeGenerateFullReply(emailContent, options || {});
+        
+        // Cache the reply with options
+        cacheService.cacheFullReply(emailContent, reply, options);
+        
+        // Log this reply generation for quality review
+        const replyId = loggingService.logAutoReply(
+          emailContent,
+          analysis,
+          reply as GeneratedReply,
+          analysis.subject,
+          analysis.sender.email
+        );
+        
+        // Add the ID to the response
+        return {
+          text: reply.text,
+          metadata: {
+            ...reply.metadata,
+            deadlinesReferenced: ensureDeadlineDates(reply.metadata.deadlinesReferenced)
+          },
+          id: replyId
+        };
+      } catch (error) {
+        console.error('Error generating full reply:', error);
+        throw error;
+      }
     },
     onError: (error) => {
       toast({
@@ -236,13 +423,42 @@ export const useAnalyzeEmail = () => {
           variant: "destructive",
         });
         return {
-          sentiment: 'neutral' as const,
-          keyPoints: ["Please enable AI features in Settings"],
+          sender: { email: 'unknown@email.com' },
+          subject: 'Please enable AI features in Settings',
+          intent: 'information' as const,
+          questions: [],
           actionItems: [],
-          urgency: 'low' as const
+          deadlines: [],
+          urgency: 'low' as const,
+          sentiment: { tone: 'neutral' as const, confidence: 0 },
+          hasAttachments: false,
+          timestamp: new Date(),
+          metadata: {
+            confidence: 0,
+            requiresHumanReview: true,
+            reviewReason: 'AI features are disabled'
+          }
         };
       }
-      return await geminiService.analyzeEmail(emailContent);
+      
+      // Check cache first
+      const cachedAnalysis = cacheService.getCachedEmailAnalysis(emailContent);
+      if (cachedAnalysis) {
+        return cachedAnalysis;
+      }
+      
+      // If not in cache, analyze the email with error handling
+      try {
+        const analysis = await safeAnalyzeEmail(emailContent);
+        
+        // Cache the result for future use
+        cacheService.cacheEmailAnalysis(emailContent, analysis);
+        
+        return analysis;
+      } catch (error) {
+        console.error('Error analyzing email:', error);
+        throw error;
+      }
     },
     onError: (error) => {
       toast({
@@ -259,6 +475,7 @@ export const useAnalyzeEmail = () => {
  */
 export const useGenerateSmartReplies = () => {
   const { toast } = useToast();
+  const analyzeEmail = useAnalyzeEmail();
   
   return useMutation({
     mutationFn: async (emailContent: string) => {
@@ -270,7 +487,62 @@ export const useGenerateSmartReplies = () => {
         });
         return ["Please enable AI features in Settings"];
       }
-      return await geminiService.generateSmartReplies(emailContent);
+      
+      // Check cache first
+      const cachedReplies = cacheService.getCachedSmartReplies(emailContent);
+      if (cachedReplies) {
+        return cachedReplies;
+      }
+      
+      try {
+        // For more accurate context-aware replies, first analyze the email
+        let analysis: EmailAnalysis;
+        
+        // Use cached analysis if available, otherwise generate new one
+        const cachedAnalysis = cacheService.getCachedEmailAnalysis(emailContent);
+        if (cachedAnalysis) {
+          analysis = cachedAnalysis;
+        } else {
+          analysis = await safeAnalyzeEmail(emailContent);
+          cacheService.cacheEmailAnalysis(emailContent, analysis);
+        }
+        
+        // Generate smart replies with the analysis context and error handling
+        const replies = await errorHandling.safelyGenerateSmartReplies(
+          geminiService.generateSmartReplies,
+          emailContent
+        );
+        
+        // Cache the replies
+        cacheService.cacheSmartReplies(emailContent, replies, analysis);
+        
+        // Log this auto-reply generation for quality review
+        const replyObj: GeneratedReply = {
+          text: replies.join('\n\n'),
+          metadata: {
+            questionsAddressed: analysis.questions,
+            actionItemsIncluded: analysis.actionItems,
+            deadlinesReferenced: analysis.deadlines,
+            confidence: analysis.metadata.confidence,
+            requiresHumanReview: analysis.metadata.requiresHumanReview,
+            reviewReason: analysis.metadata.reviewReason
+          }
+        };
+        
+        // Log the smart reply generation
+        loggingService.logAutoReply(
+          emailContent,
+          analysis,
+          replyObj,
+          analysis.subject,
+          analysis.sender.email
+        );
+        
+        return replies;
+      } catch (error) {
+        console.error('Error generating smart replies:', error);
+        throw error;
+      }
     },
     onError: (error) => {
       toast({
@@ -354,4 +626,4 @@ export default {
   useSummarizeEmailBriefly,
   usePrioritizeEmail,
   isAIConfigured
-}; 
+};

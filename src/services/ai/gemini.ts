@@ -1,4 +1,6 @@
 import { EmailDraft } from '../gmail/types';
+import { generateEmailReply } from './emailReplyGenerator';
+import { parseEmailContent, analyzeEmailContent } from './emailAnalysis';
 
 // Define types for Gemini API results
 interface GenerateContentResponse {
@@ -332,39 +334,123 @@ export const generateReplyOptions = async (emailContent: string): Promise<string
   try {
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    // Generate generic replies
-    const containsQuestion = emailContent.toLowerCase().includes('?');
-    const containsRequest = /could you|would you|can you|please|help/i.test(emailContent);
-    const containsUpdate = /update|progress|status/i.test(emailContent);
-    const containsGreeting = /hi|hello|hey/i.test(emailContent);
+    // First, perform a thorough analysis to understand the email
+    const analysis = await analyzeEmail(emailContent);
     
-    const options = [];
+    // Generate tailored reply options based on the analysis
+    const options: string[] = [];
     
-    if (containsQuestion) {
-      options.push("Thanks for your question. I'll look into this and get back to you soon.");
+    // Question-based replies
+    if (analysis.questions.length > 0) {
+      if (analysis.questions.length === 1) {
+        // For a single question, directly address it
+        const question = analysis.questions[0].replace(/\?/g, '').trim();
+        options.push(`I'll look into your question about ${question} and get back to you shortly.`);
+        
+        // Add a tentative answer if possible
+        if (question.length < 50) {
+          options.push(`Regarding your question about ${question}, [brief answer]. Let me know if you need more details.`);
+        }
+      } else {
+        // For multiple questions
+        options.push(`Thanks for your questions. I'll address each one in detail in my full response shortly.`);
+        options.push(`I've noted your ${analysis.questions.length} questions and will respond with complete answers soon.`);
+      }
     }
     
-    if (containsRequest) {
-      options.push("I'll take care of this request right away. I'll update you once it's done.");
+    // Action item-based replies
+    if (analysis.actionItems.length > 0) {
+      if (analysis.actionItems.length === 1) {
+        // For a single action item
+        const actionItem = analysis.actionItems[0]
+          .replace(/^(please|could you|can you|would you)\s+/i, '')
+          .replace(/[.?!]$/g, '')
+          .trim();
+          
+        if (actionItem.length < 40) {
+          options.push(`I'll take care of ${actionItem} right away and update you once it's done.`);
+        } else {
+          options.push(`I'll address your request promptly and get back to you with an update.`);
+        }
+      } else {
+        // For multiple action items
+        options.push(`I've noted all ${analysis.actionItems.length} requests and will start working on them.`);
+        options.push(`Thanks for outlining what you need. I'll handle these items and keep you updated on my progress.`);
+      }
     }
     
-    if (containsUpdate) {
-      options.push("Thank you for the update. I appreciate you keeping me informed.");
+    // Deadline-based replies
+    if (analysis.deadlines.length > 0) {
+      // Check if there's a high priority deadline
+      const priorityDeadline = analysis.deadlines.find(d => d.isPriority);
+      
+      if (priorityDeadline) {
+        options.push(`I understand this is time-sensitive. I'll prioritize this and respond by ${priorityDeadline.text.replace(/^(by|due|deadline[:\s]+|no later than|before|complete by)/i, '').trim()}.`);
+      } else if (analysis.deadlines.length === 1) {
+        const deadline = analysis.deadlines[0];
+        options.push(`I'll make sure to address this by ${deadline.text.replace(/^(by|due|deadline[:\s]+|no later than|before|complete by)/i, '').trim()}.`);
+      } else {
+        options.push(`I've noted all the timelines you mentioned and will ensure everything is done on schedule.`);
+      }
     }
     
-    if (containsGreeting && options.length < 3) {
-      options.push("Thanks for reaching out! I'll review this and respond in more detail shortly.");
+    // Intent-based replies
+    switch (analysis.intent) {
+      case 'information':
+        if (!analysis.questions.length && !analysis.actionItems.length) {
+          options.push(`Thank you for sharing this information. I appreciate you keeping me updated.`);
+          options.push(`Thanks for this update. I've noted the details you shared.`);
+        }
+        break;
+        
+      case 'meeting':
+        if (analysis.deadlines.length > 0) {
+          options.push(`I'm available for the meeting and have marked my calendar for ${analysis.deadlines[0].text.replace(/^(by|due|deadline[:\s]+|no later than|before|complete by)/i, '').trim()}.`);
+        } else {
+          options.push(`I'd be happy to meet. Please let me know what times work best for you.`);
+          options.push(`A meeting sounds great. I'm available this week on Tuesday afternoon or Thursday morning.`);
+        }
+        break;
+        
+      case 'followUp':
+        options.push(`Thanks for following up. I'll prioritize this and get back to you with a complete update.`);
+        options.push(`I appreciate the reminder. I'm working on this and will have an update for you by the end of the day.`);
+        break;
+        
+      case 'introduction':
+        options.push(`It's great to connect with you. I'd be happy to schedule some time to discuss how we might work together.`);
+        options.push(`Thank you for reaching out. I'm interested in learning more about your work and potential collaboration.`);
+        break;
+    }
+    
+    // Urgency-based replies
+    if (analysis.urgency === 'high' && options.length < 3) {
+      options.push(`I understand this is urgent. I'll respond in detail as soon as possible.`);
+    }
+    
+    // Formality and tone matching
+    if (analysis.formality === 'formal' && options.length < 3) {
+      options.push(`Thank you for your correspondence. I will review the details and respond appropriately.`);
+    } else if (analysis.formality === 'casual' && options.length < 3) {
+      options.push(`Thanks for your email! I'll get back to you with more info soon.`);
+    }
+    
+    // Consider sentiment in response
+    if (analysis.sentiment.tone === 'negative' && analysis.sentiment.confidence > 0.6) {
+      options.push(`I understand your concerns and will address them promptly. Thank you for bringing this to my attention.`);
+    } else if (analysis.sentiment.tone === 'positive' && analysis.sentiment.confidence > 0.6 && options.length < 3) {
+      options.push(`I'm glad to hear from you! I'll respond to your email in detail shortly.`);
     }
     
     // Ensure we have at least 3 options
     const defaultOptions = [
-      "Thanks for your email. I'll look into this and respond shortly.",
-      "I appreciate you reaching out. Let me get back to you on this.",
-      "Thank you for the message. I'll take care of this soon."
+      "Thanks for your email. I'll look into this and respond in detail shortly.",
+      "I appreciate you reaching out. I'll get back to you on this as soon as possible.",
+      "Thank you for the message. I'll review and respond with a complete answer soon."
     ];
     
     while (options.length < 3) {
-      options.push(defaultOptions[options.length]);
+      options.push(defaultOptions[options.length % defaultOptions.length]);
     }
     
     return options;
@@ -378,222 +464,862 @@ export const generateReplyOptions = async (emailContent: string): Promise<string
   }
 };
 
+interface GeneratedEmailReply {
+  text: string;
+  metadata: {
+    questionsAddressed: string[];
+    actionItemsIncluded: string[];
+    deadlinesReferenced: Array<{ text: string; date: string }>;
+    confidence: number;
+    requiresHumanReview: boolean;
+    reviewReason?: string;
+  };
+}
+
 /**
  * Generate auto-reply for an email with specified parameters
  */
 export const generateFullReply = async (
   emailContent: string, 
   options: { 
-    tone?: 'formal' | 'friendly' | 'assertive' | 'concise' | 'persuasive',
-    length?: 'short' | 'medium' | 'long',
-    context?: string,
-    includeIntro?: boolean,
-    includeOutro?: boolean
+    tone?: 'formal' | 'friendly' | 'assertive' | 'concise' | 'persuasive';
+    length?: 'short' | 'medium' | 'long';
+    context?: string;
+    includeIntro?: boolean;
+    includeOutro?: boolean;
   } = {}
-): Promise<string> => {
+): Promise<GeneratedEmailReply> => {
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     const defaultOptions = {
       tone: 'friendly' as const,
       length: 'medium' as const,
       includeIntro: true,
-      includeOutro: true,
-      context: ''
+      includeOutro: true
     };
     
     const settings = { ...defaultOptions, ...options };
     
-    // Generate a reply based on email content and settings
-    let intro = '';
+    // Step 1: Analyze the email to extract all key information
+    const analysis = await analyzeEmail(emailContent);
+    
+    // Step 2: Generate the reply based on comprehensive analysis
     let body = '';
-    let outro = '';
     
-    // Create intro based on tone
+    // Step 3: Create an appropriate greeting based on sender relationship and formality
     if (settings.includeIntro) {
-      switch (settings.tone) {
-        case 'formal':
-          intro = 'Dear Sir/Madam,\n\n';
-          break;
-        case 'friendly':
-          intro = 'Hi there,\n\n';
-          break;
-        case 'assertive':
-          intro = 'Hello,\n\n';
-          break;
-        case 'concise':
-          intro = '';
-          break;
-        case 'persuasive':
-          intro = 'Hello,\n\n';
-          break;
+      const name = analysis.sender.name?.split(' ')[0] || '';
+      
+      // Adjust greeting based on formality level and relationship context
+      if (analysis.formality === 'formal' || settings.tone === 'formal') {
+        body += `Dear ${name || (analysis.sender.name ? analysis.sender.name : 'Sir/Madam')},\n\n`;
+      } else if (analysis.formality === 'casual' || settings.tone === 'friendly') {
+        body += `Hi ${name || 'there'},\n\n`;
+      } else {
+        body += `Hello ${name || ''},\n\n`;
       }
     }
     
-    // Create body based on length and content
-    const containsQuestion = emailContent.toLowerCase().includes('?');
-    const containsRequest = /could you|would you|can you|please|help/i.test(emailContent);
-    const containsUpdate = /update|progress|status/i.test(emailContent);
+    // Step 4: Add a contextual opening sentence that references the original email
+    const openingSentences = [
+      `Thank you for your email regarding ${analysis.subject.toLowerCase()}.`,
+      `I appreciate you reaching out about ${analysis.subject.toLowerCase()}.`,
+      `Thanks for your message about ${analysis.subject.toLowerCase()}.`
+    ];
     
-    // Determine body content
-    if (containsQuestion) {
-      if (settings.length === 'short') {
-        body = "Thank you for your question. I'll look into this and get back to you with an answer.\n\n";
-      } else if (settings.length === 'medium') {
-        body = "Thank you for your question. I understand this is important to you. I'll need to gather some information and will provide you with a detailed answer as soon as possible.\n\n";
-      } else {
-        body = "Thank you for your question. I understand this is important to you. I'll need to gather some information from our team to ensure I provide you with the most accurate and helpful answer. I anticipate having this for you within the next 1-2 business days. If you need the information more urgently, please let me know and I'll prioritize accordingly.\n\n";
-      }
-    } else if (containsRequest) {
-      if (settings.length === 'short') {
-        body = "I'll take care of your request promptly.\n\n";
-      } else if (settings.length === 'medium') {
-        body = "I'll take care of your request promptly. I appreciate your patience and will update you once it's been completed.\n\n";
-      } else {
-        body = "I'll take care of your request promptly. I understand the importance of this matter and will prioritize it accordingly. I'll be coordinating with our team to ensure everything is handled properly and efficiently. You can expect an update from me within the next 24 hours with either the completed request or a status update and timeline.\n\n";
-      }
-    } else if (containsUpdate) {
-      if (settings.length === 'short') {
-        body = "Thank you for the update. I appreciate you keeping me informed.\n\n";
-      } else if (settings.length === 'medium') {
-        body = "Thank you for the update. I appreciate you keeping me informed about the progress. This information is very helpful.\n\n";
-      } else {
-        body = "Thank you for the comprehensive update. I greatly appreciate you keeping me informed about the progress and details of the situation. This information is very helpful for us to stay aligned and make informed decisions moving forward. Please continue to share any new developments as they arise.\n\n";
-      }
-    } else {
-      if (settings.length === 'short') {
-        body = "Thanks for your email. I'll review this information shortly.\n\n";
-      } else if (settings.length === 'medium') {
-        body = "Thanks for your email. I appreciate you reaching out on this matter. I'll review the information you've provided and determine the best next steps.\n\n";
-      } else {
-        body = "Thanks for your email. I appreciate you reaching out on this matter. I've received the information you've provided and will be giving it my full attention. After a thorough review, I'll determine the best next steps and coordinate with any relevant team members if needed. You can expect my detailed response with any questions or actions needed from your side.\n\n";
-      }
+    // Choose opening sentence based on tone
+    let openingSentence = '';
+    switch (settings.tone) {
+      case 'formal':
+        openingSentence = `Thank you for your correspondence regarding ${analysis.subject.toLowerCase()}.`;
+        break;
+      case 'friendly':
+        openingSentence = openingSentences[Math.floor(Math.random() * openingSentences.length)];
+        break;
+      case 'assertive':
+        openingSentence = `I've reviewed your email about ${analysis.subject.toLowerCase()} and am responding to your points.`;
+        break;
+      case 'concise':
+        openingSentence = `Regarding ${analysis.subject.toLowerCase()}:`;
+        break;
+      case 'persuasive':
+        openingSentence = `Thank you for bringing ${analysis.subject.toLowerCase()} to my attention.`;
+        break;
+      default:
+        openingSentence = openingSentences[Math.floor(Math.random() * openingSentences.length)];
     }
     
-    // Add context if provided
+    // Add user-provided context if available
     if (settings.context) {
-      body += `Regarding your question about ${settings.context}: I'll be sure to address this specifically in my follow-up.\n\n`;
+      body += `${openingSentence} ${settings.context}\n\n`;
+    } else {
+      body += `${openingSentence}\n\n`;
     }
     
-    // Create outro based on tone
-    if (settings.includeOutro) {
-      switch (settings.tone) {
-        case 'formal':
-          outro = 'Best regards,\n[Your Name]';
-          break;
-        case 'friendly':
-          outro = 'Cheers,\n[Your Name]';
-          break;
-        case 'assertive':
-          outro = 'I look forward to your prompt response.\n\nRegards,\n[Your Name]';
-          break;
-        case 'concise':
-          outro = 'Thanks,\n[Your Name]';
-          break;
-        case 'persuasive':
-          outro = 'I really appreciate your help with this.\n\nBest,\n[Your Name]';
-          break;
+    // Step 5: Address specific questions with detailed answers
+    if (analysis.questions.length > 0) {
+      // Handle questions differently based on length setting
+      if (settings.length === 'short' || analysis.questions.length > 3) {
+        // For short replies or many questions, use a more compact format
+        body += `To address your questions:\n\n`;
+        analysis.questions.forEach((question, index) => {
+          // Extract the core of the question for brevity
+          const questionCore = question.replace(/\?/g, '').trim();
+          const shortQuestion = questionCore.length > 40 
+            ? questionCore.substring(0, 40) + '...' 
+            : questionCore;
+            
+          body += `${index + 1}. Regarding ${shortQuestion}: [Your response here]\n`;
+        });
+        body += '\n';
+      } else {
+        // For medium/long replies with fewer questions, provide more detailed responses
+        analysis.questions.forEach(question => {
+          // Extract the essence of the question for the response
+          const questionEssence = question
+            .replace(/^(can|could|would|do|does|is|are|will|should|have|has|did|was|were)\s+you/i, '')
+            .replace(/\?/g, '')
+            .trim();
+            
+          body += `Regarding your question about ${questionEssence}:\n[Your detailed response here]\n\n`;
+        });
       }
     }
     
-    return `${intro}${body}${outro}`;
+    // Step 6: Address action items with clear responses
+    if (analysis.actionItems.length > 0) {
+      // Different formats based on length setting
+      if (settings.length === 'short' || analysis.actionItems.length > 3) {
+        body += `I'll address your requests:\n\n`;
+        analysis.actionItems.forEach((item, index) => {
+          // Create a shortened version of the action item
+          const shortItem = item.length > 50 
+            ? item.substring(0, 50) + '...' 
+            : item;
+            
+          body += `${index + 1}. ${shortItem}: [Your action/response here]\n`;
+        });
+        body += '\n';
+      } else {
+        body += `Regarding your requests:\n\n`;
+        analysis.actionItems.forEach(item => {
+          // Clean up the action item text
+          const cleanItem = item
+            .replace(/^(please|could you|can you|would you)\s+/i, '')
+            .replace(/[.?!]$/g, '')
+            .trim();
+            
+          body += `- ${cleanItem}: [Your detailed response/action here]\n`;
+        });
+        body += '\n';
+      }
+    }
+    
+    // Step 7: Acknowledge deadlines specifically
+    if (analysis.deadlines.length > 0) {
+      if (settings.tone === 'concise') {
+        body += `Noted deadlines:\n`;
+        analysis.deadlines.forEach(deadline => {
+          body += `- ${deadline.text}: [Your commitment/response]\n`;
+        });
+        body += '\n';
+      } else {
+        body += `I acknowledge the following timeline${analysis.deadlines.length > 1 ? 's' : ''}:\n\n`;
+        analysis.deadlines.forEach(deadline => {
+          // Format the date if possible
+          let formattedDate = deadline.date;
+          try {
+            if (deadline.date !== 'unknown') {
+              const date = new Date(deadline.date);
+              formattedDate = date.toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                month: 'long', 
+                day: 'numeric' 
+              });
+            }
+          } catch (e) {
+            formattedDate = deadline.text;
+          }
+          
+          // Acknowledge the deadline with commitment
+          if (deadline.isPriority) {
+            body += `- ${deadline.text}: I'll prioritize this and ensure it's completed ${formattedDate !== 'unknown' ? `by ${formattedDate}` : 'by the specified time'}.\n`;
+          } else {
+            body += `- ${deadline.text}: I'll work to meet this deadline ${formattedDate !== 'unknown' ? `(${formattedDate})` : ''}.\n`;
+          }
+        });
+        body += '\n';
+      }
+    }
+    
+    // Step 8: Reference previous communications if mentioned
+    if (analysis.previousEmailReferences.length > 0 && settings.length !== 'short') {
+      const reference = analysis.previousEmailReferences[0];
+      body += `As you mentioned regarding our ${reference}, [relevant context or follow-up here].\n\n`;
+    }
+    
+    // Step 9: Acknowledge attachments if present
+    if (analysis.hasAttachments && analysis.attachmentReferences.length > 0) {
+      body += `Thank you for the ${analysis.attachmentReferences.join(' and ')}. [Comment about the attachment if relevant].\n\n`;
+    }
+    
+    // Step 10: Add an appropriate closing based on the email context and tone
+    if (settings.includeOutro) {
+      // Add next steps or call to action first
+      if (analysis.intent === 'request' || analysis.actionItems.length > 0) {
+        if (settings.tone === 'assertive') {
+          body += `I'll follow up with you once these items are addressed. `;
+        } else if (settings.tone === 'persuasive') {
+          body += `I believe this addresses your concerns and I look forward to your feedback. `;
+        } else if (settings.tone !== 'concise') {
+          body += `Please let me know if you need any additional information. `;
+        }
+      }
+      
+      // Then add the formal sign-off
+      switch (settings.tone) {
+        case 'formal':
+          body += '\nBest regards,\n[Your Name]';
+          break;
+        case 'friendly':
+          body += '\nBest wishes,\n[Your Name]';
+          break;
+        case 'assertive':
+          body += '\nRegards,\n[Your Name]';
+          break;
+        case 'concise':
+          body += '\nThanks,\n[Your Name]';
+          break;
+        case 'persuasive':
+          body += '\nLooking forward to your response,\n[Your Name]';
+          break;
+        default:
+          body += '\nBest,\n[Your Name]';
+      }
+    }
+    
+    // Step 11: Return the generated reply with metadata
+    return {
+      text: body,
+      metadata: {
+        questionsAddressed: analysis.questions,
+        actionItemsIncluded: analysis.actionItems,
+        deadlinesReferenced: analysis.deadlines,
+        confidence: analysis.metadata.confidence,
+        requiresHumanReview: analysis.metadata.requiresHumanReview,
+        reviewReason: analysis.metadata.reviewReason
+      }
+    };
   } catch (error) {
     console.error('Error generating email reply:', error);
-    return "I'll get back to you soon.\n\nRegards,\n[Your Name]";
+    return {
+      text: `I'll get back to you soon.\n\nRegards,\n[Your Name]`,
+      metadata: {
+        questionsAddressed: [],
+        actionItemsIncluded: [],
+        deadlinesReferenced: [],
+        confidence: 0,
+        requiresHumanReview: true,
+        reviewReason: 'Error generating reply'
+      }
+    };
   }
 };
 
 /**
  * Analyze email sentiment and key points
  */
-export const analyzeEmail = async (emailContent: string): Promise<{
-  sentiment: 'positive' | 'negative' | 'neutral',
-  keyPoints: string[],
-  actionItems: string[],
-  urgency: 'low' | 'medium' | 'high'
-}> => {
+interface EmailAnalysis {
+  // Sender information
+  sender: { 
+    name?: string; 
+    email: string;
+    company?: string;
+    title?: string;
+  };
+  subject: string;
+  
+  // Email categorization  
+  intent: 'request' | 'information' | 'followUp' | 'introduction' | 'meeting';
+  primaryPurpose: string; // A brief description of the main purpose of the email
+  
+  // Detailed content analysis
+  questions: string[];       // Specific questions that need responses
+  actionItems: string[];     // Action items requested of the recipient
+  deadlines: Array<{ 
+    text: string; 
+    date: string;
+    isPriority: boolean;
+  }>;
+  
+  // Previous context
+  previousEmailReferences: string[]; // References to previous communications
+  
+  // Email characteristics
+  urgency: 'low' | 'medium' | 'high';
+  importance: 'low' | 'medium' | 'high';
+  formality: 'casual' | 'neutral' | 'formal';
+  sentiment: {
+    tone: 'positive' | 'negative' | 'neutral';
+    confidence: number;
+  };
+  
+  // Attachments and additional elements
+  hasAttachments: boolean;
+  attachmentReferences: string[]; // References to any attachments mentioned
+  
+  // Metadata
+  timestamp: Date;
+  metadata: {
+    confidence: number;
+    requiresHumanReview: boolean;
+    reviewReason?: string;
+    relationshipContext?: 'personal' | 'professional' | 'unknown';
+    keyTopics: string[]; // Main topics discussed in the email
+  };
+}
+
+export const analyzeEmail = async (emailContent: string): Promise<EmailAnalysis> => {
   try {
     await new Promise(resolve => setTimeout(resolve, 1200));
     
-    // Determine sentiment based on keywords
-    const positiveWords = ['thanks', 'appreciate', 'happy', 'great', 'good', 'excellent', 'pleased', 'love'];
-    const negativeWords = ['issue', 'problem', 'concerned', 'disappointed', 'urgent', 'error', 'wrong', 'bad', 'unhappy'];
+    // Parse email content to extract text
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = emailContent;
+    const text = tempDiv.textContent || tempDiv.innerText || '';
     
-    const content = emailContent.toLowerCase();
-    let positiveCount = 0;
-    let negativeCount = 0;
+    // Extract sender information
+    const emailRegex = /([^@\s]+@[^@\s]+\.[^@\s]+)/;
+    const emailMatch = text.match(emailRegex);
+    const senderEmail = emailMatch ? emailMatch[0] : 'unknown@email.com';
     
-    positiveWords.forEach(word => {
-      if (content.includes(word)) positiveCount++;
-    });
+    // Extract sender name
+    let senderName;
+    if (emailMatch) {
+      const beforeEmail = text.substring(0, emailMatch.index || 0).trim();
+      const nameMatch = beforeEmail.match(/([A-Z][a-z]+\s+[A-Z][a-z]+)/);
+      senderName = nameMatch ? nameMatch[0] : undefined;
+    }
+
+    // Extract company information if available
+    const companyRegex = /@([^.]+)\.|from\s+([A-Z][a-zA-Z0-9\s]+)\b/;
+    const companyMatch = text.match(companyRegex);
+    const company = companyMatch ? companyMatch[1] || companyMatch[2] : undefined;
+
+    // Extract questions using more sophisticated patterns
+    const sentences = text.split(/[.!?]+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
     
-    negativeWords.forEach(word => {
-      if (content.includes(word)) negativeCount++;
-    });
+    // Find all questions (both explicit with ? and implicit)
+    const explicitQuestions = sentences
+      .filter(s => s.endsWith('?'))
+      .map(s => s.trim());
     
-    let sentiment: 'positive' | 'negative' | 'neutral';
-    if (positiveCount > negativeCount) {
-      sentiment = 'positive';
-    } else if (negativeCount > positiveCount) {
-      sentiment = 'negative';
-    } else {
-      sentiment = 'neutral';
+    // Find implicit questions (sentences that ask for information without a question mark)
+    const implicitQuestionPatterns = [
+      /\bcould you\b.*?[^?]/i,
+      /\bcan you\b.*?[^?]/i,
+      /\bwould you\b.*?[^?]/i,
+      /\bplease let me know\b.*?[^?]/i,
+      /\bI('d| would) like to know\b.*?[^?]/i,
+      /\b(tell|inform|update) me\b.*?[^?]/i,
+      /\bneed to know\b.*?[^?]/i,
+      /\bclarify\b.*?[^?]/i,
+      /\bexplain\b.*?[^?]/i
+    ];
+    
+    const implicitQuestions = [];
+    for (const pattern of implicitQuestionPatterns) {
+      const matches = text.match(pattern);
+      if (matches) {
+        implicitQuestions.push(...matches);
+      }
     }
     
-    // Extract key points using a simple approach
-    const sentences = emailContent.split(/[.!?]+/).filter(s => s.trim().length > 10);
-    const keyPoints = sentences.slice(0, Math.min(3, sentences.length)).map(s => s.trim());
+    // Combine and deduplicate questions
+    const allQuestions = [...explicitQuestions, ...implicitQuestions];
+    const questions = [...new Set(allQuestions)].map(q => q.trim());
     
-    // Identify action items by looking for common patterns
+    // Determine sentiment with enhanced analysis
+    const positiveWords = [
+      'thanks', 'appreciate', 'happy', 'great', 'good', 'excellent', 
+      'pleased', 'love', 'wonderful', 'fantastic', 'excited', 'grateful',
+      'delighted', 'glad', 'perfect', 'impressive', 'outstanding'
+    ];
+    
+    const negativeWords = [
+      'issue', 'problem', 'concerned', 'disappointed', 'urgent', 'error', 
+      'wrong', 'bad', 'unhappy', 'failure', 'unfortunately', 'regret',
+      'sorry', 'trouble', 'difficult', 'frustration', 'failed', 'complaint',
+      'delay', 'inconvenience', 'mistake', 'concern'
+    ];
+    
+    const content = text.toLowerCase();
+    const words = content.split(/\s+/);
+    
+    let positiveCount = words.filter(word => positiveWords.includes(word)).length;
+    let negativeCount = words.filter(word => negativeWords.includes(word)).length;
+    
+    // Calculate sentiment confidence
+    const totalSentimentWords = positiveCount + negativeCount;
+    const sentimentConfidence = Math.min(totalSentimentWords * 0.2, 0.9);
+    
+    // Determine the sentiment tone
+    let sentimentTone: 'positive' | 'negative' | 'neutral' = 'neutral';
+    if (positiveCount > negativeCount * 1.5) {
+      sentimentTone = 'positive';
+    } else if (negativeCount > positiveCount * 1.2) {
+      sentimentTone = 'negative';
+    }
+
+    const sentiment = {
+      tone: sentimentTone,
+      confidence: sentimentConfidence
+    };
+
+    // Identify action items with improved patterns
     const actionPatterns = [
       /please .*?[.?!]/gi,
       /can you .*?[.?!]/gi,
       /could you .*?[.?!]/gi,
       /would you .*?[.?!]/gi,
       /need to .*?[.?!]/gi,
-      /we should .*?[.?!]/gi
+      /we should .*?[.?!]/gi,
+      /you (should|must|need) to .*?[.?!]/gi,
+      /kindly .*?[.?!]/gi,
+      /it would be (great|helpful|appreciated) if you could .*?[.?!]/gi,
+      /I('d| would| am) (like|asking|requesting|hoping) (you )?(to|for) .*?[.?!]/gi
     ];
     
-    const actionItems = [];
+    const actionItems: string[] = [];
     actionPatterns.forEach(pattern => {
-      const matches = emailContent.match(pattern);
+      const matches = text.match(pattern);
       if (matches) {
         matches.forEach(match => {
-          if (!actionItems.includes(match)) {
-            actionItems.push(match);
+          if (!actionItems.some(item => item.toLowerCase().includes(match.toLowerCase().trim()))) {
+            actionItems.push(match.trim());
           }
         });
       }
     });
+
+    // Extract deadlines with improved patterns
+    const deadlinePatterns = [
+      /by\s+(.*?)([.?!]|$)/gi,
+      /due\s+(.*?)([.?!]|$)/gi,
+      /deadline[:\s]+(.*?)([.?!]|$)/gi,
+      /no later than\s+(.*?)([.?!]|$)/gi,
+      /before\s+(.*?)([.?!]|$)/gi,
+      /complete by\s+(.*?)([.?!]|$)/gi,
+      /within\s+(\d+)\s+(day|week|hour|minute|business day)s?/gi,
+      /this (week|month)/gi,
+      /(today|tomorrow|asap)/gi,
+      /(\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4})/g,
+      /(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}/gi,
+      /(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/gi,
+      /next (week|month|Monday|Tuesday|Wednesday|Thursday|Friday|weekend)/gi
+    ];
+
+    const deadlines: Array<{ text: string; date: string; isPriority: boolean }> = [];
+    const today = new Date();
     
+    deadlinePatterns.forEach(pattern => {
+      const matches = text.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          // Try to parse the date from the matched text
+          const dateStr = match.replace(/^(by|due|deadline[:\s]+|no later than|before|complete by)/i, '').trim();
+          
+          try {
+            let date: Date | null = null;
+            let isPriority = false;
+            
+            // Handle relative date expressions
+            if (/today/i.test(dateStr)) {
+              date = new Date();
+              isPriority = true;
+            } else if (/tomorrow/i.test(dateStr)) {
+              date = new Date(today);
+              date.setDate(date.getDate() + 1);
+              isPriority = true;
+            } else if (/asap/i.test(dateStr)) {
+              date = new Date(today);
+              isPriority = true;
+            } else if (/this week/i.test(dateStr)) {
+              date = new Date(today);
+              date.setDate(date.getDate() + (7 - date.getDay()));
+            } else if (/next week/i.test(dateStr)) {
+              date = new Date(today);
+              date.setDate(date.getDate() + (14 - date.getDay()));
+            } else if (/within\s+(\d+)\s+(day|week|hour|minute|business day)s?/i.test(dateStr)) {
+              const match = dateStr.match(/within\s+(\d+)\s+(day|week|hour|minute|business day)s?/i);
+              if (match) {
+                const num = parseInt(match[1]);
+                const unit = match[2].toLowerCase();
+                date = new Date(today);
+                if (unit.includes('day')) {
+                  date.setDate(date.getDate() + num);
+                  isPriority = num <= 3;
+                } else if (unit.includes('week')) {
+                  date.setDate(date.getDate() + (num * 7));
+                } else if (unit.includes('hour')) {
+                  date.setHours(date.getHours() + num);
+                  isPriority = true;
+                } else if (unit.includes('minute')) {
+                  date.setMinutes(date.getMinutes() + num);
+                  isPriority = true;
+                }
+              }
+            } else {
+              // Try to parse actual date
+              date = new Date(dateStr);
+              
+              // If that fails, try more specific formatting
+              if (isNaN(date.getTime())) {
+                // Handle day of week
+                const dayMatch = dateStr.match(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i);
+                if (dayMatch) {
+                  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                  const targetDay = days.indexOf(dayMatch[1].toLowerCase());
+                  date = new Date(today);
+                  const currentDay = date.getDay();
+                  date.setDate(date.getDate() + (targetDay + 7 - currentDay) % 7);
+                  isPriority = (targetDay + 7 - currentDay) % 7 <= 2;
+                }
+              }
+            }
+            
+            // Check if date was successfully determined and add it to deadlines
+            if (date && !isNaN(date.getTime())) {
+              // Check if this deadline is already in the array
+              const existingIndex = deadlines.findIndex(d => 
+                d.text.toLowerCase().includes(match.toLowerCase()) || 
+                match.toLowerCase().includes(d.text.toLowerCase())
+              );
+              
+              if (existingIndex === -1) {
+                // If not in array, add it
+                deadlines.push({ 
+                  text: match.trim(), 
+                  date: date.toISOString(),
+                  isPriority: isPriority || (date.getTime() - today.getTime() < 86400000 * 3) // 3 days
+                });
+              } else {
+                // If already in array, update it if this date is more specific
+                if (date.getTime() - today.getTime() < new Date(deadlines[existingIndex].date).getTime() - today.getTime()) {
+                  deadlines[existingIndex] = { 
+                    text: match.trim(), 
+                    date: date.toISOString(),
+                    isPriority: isPriority || (date.getTime() - today.getTime() < 86400000 * 3) // 3 days
+                  };
+                }
+              }
+            } else if (match.includes('asap') || match.includes('urgent') || match.includes('immediately')) {
+              // For ASAP or urgent deadlines with no specific date
+              deadlines.push({ 
+                text: match.trim(), 
+                date: today.toISOString(),
+                isPriority: true
+              });
+            }
+          } catch (e) {
+            // If date parsing fails, still include the text
+            deadlines.push({ 
+              text: match.trim(), 
+              date: 'unknown',
+              isPriority: match.toLowerCase().includes('asap') || 
+                        match.toLowerCase().includes('urgent') || 
+                        match.toLowerCase().includes('immediately')
+            });
+          }
+        });
+      }
+    });
+
     // Determine urgency
     let urgency: 'low' | 'medium' | 'high' = 'low';
-    const urgentWords = ['urgent', 'asap', 'immediately', 'emergency', 'deadline', 'today', 'soon', 'quickly'];
+    const urgentWords = [
+      'urgent', 'asap', 'immediately', 'emergency', 'deadline', 'today', 
+      'soon', 'quickly', 'critical', 'important', 'priority', 'promptly',
+      'expedite', 'rush', 'time-sensitive'
+    ];
     
-    let urgencyCount = 0;
-    urgentWords.forEach(word => {
-      if (content.includes(word)) urgencyCount++;
-    });
-    
-    if (urgencyCount >= 2) {
+    const urgencyCount = words.filter(word => urgentWords.includes(word)).length;
+    const hasHighPriorityDeadline = deadlines.some(d => d.isPriority);
+
+    if (urgencyCount >= 2 || hasHighPriorityDeadline || 
+        deadlines.some(d => d.date !== 'unknown' && new Date(d.date).getTime() - today.getTime() < 86400000)) {
       urgency = 'high';
-    } else if (urgencyCount === 1) {
+    } else if (urgencyCount === 1 || deadlines.length > 0) {
       urgency = 'medium';
     }
+
+    // Determine importance
+    let importance: 'low' | 'medium' | 'high' = 'medium';
+    const importanceWords = [
+      'important', 'critical', 'essential', 'significant', 'key', 
+      'major', 'vital', 'crucial', 'priority', 'attention'
+    ];
     
+    const importanceCount = words.filter(word => importanceWords.includes(word)).length;
+    
+    if (importanceCount >= 2 || urgency === 'high') {
+      importance = 'high';
+    } else if (importanceCount === 0 && urgency === 'low' && actionItems.length === 0 && questions.length === 0) {
+      importance = 'low';
+    }
+
+    // Determine formality level
+    let formality: 'casual' | 'neutral' | 'formal' = 'neutral';
+    const formalWords = [
+      'dear', 'sincerely', 'regards', 'respectfully', 'esteemed',
+      'pursuant', 'hereby', 'aforementioned', 'acknowledge', 'formal',
+      'honored', 'sir', 'madam', 'kindly', 'cordially'
+    ];
+    
+    const casualWords = [
+      'hey', 'hi', 'hello', 'cheers', 'thanks', 'btw', 'fyi',
+      'okay', 'cool', 'awesome', 'yeah', 'yep', 'sure',
+      'no worries', 'no problem', 'take care'
+    ];
+    
+    const formalCount = words.filter(word => formalWords.includes(word)).length;
+    const casualCount = words.filter(word => casualWords.includes(word)).length;
+    
+    if (formalCount > casualCount * 1.5) {
+      formality = 'formal';
+    } else if (casualCount > formalCount * 1.5) {
+      formality = 'casual';
+    }
+
+    // Determine intent with more sophisticated analysis
+    let intent: EmailAnalysis['intent'] = 'information';
+    if (questions.length > 0 || actionItems.some(item => 
+        /please clarify|can you explain|need.*information|tell me more/i.test(item))) {
+      intent = 'request';
+    } else if (content.includes('meeting') || content.includes('schedule') || 
+              content.includes('calendar') || content.includes('appointment') ||
+              content.includes('call') || content.includes('discuss') ||
+              content.includes('conference')) {
+      intent = 'meeting';
+    } else if (content.includes('following up') || content.includes('checking in') || 
+              content.includes('status update') || content.includes('progress report') ||
+              content.includes('touching base') || content.includes('circling back')) {
+      intent = 'followUp';
+    } else if (content.includes('introduce') || content.includes('nice to meet') || 
+              content.includes('connecting') || content.includes('pleasure to meet') ||
+              content.includes('introducing myself') || content.includes('wanted to connect')) {
+      intent = 'introduction';
+    }
+
+    // Extract primary purpose
+    let primaryPurpose = 'Sharing information';
+    if (intent === 'request') {
+      primaryPurpose = questions.length > 0 
+        ? 'Asking for information or answers' 
+        : 'Requesting action or assistance';
+    } else if (intent === 'meeting') {
+      primaryPurpose = 'Scheduling or discussing a meeting';
+    } else if (intent === 'followUp') {
+      primaryPurpose = 'Following up on previous communication';
+    } else if (intent === 'introduction') {
+      primaryPurpose = 'Introduction or establishing contact';
+    }
+
+    // Check for attachments
+    const hasAttachments = content.includes('attached') || content.includes('attachment') || 
+                          content.includes('enclosed') || content.includes('see file');
+                          
+    // Extract attachment references
+    const attachmentReferences: string[] = [];
+    const attachmentPatterns = [
+      /attached.*?(is|are).*?([^.?!]+)[.?!]/i,
+      /I('ve| have) attached ([^.?!]+)[.?!]/i,
+      /please find ([^.?!]+) attached/i,
+      /enclosed ([^.?!]+)/i,
+      /see.*?(attached|enclosed) ([^.?!]+)/i
+    ];
+    
+    attachmentPatterns.forEach(pattern => {
+      const matches = text.match(pattern);
+      if (matches && matches.length > 1) {
+        const reference = matches[matches.length - 1].trim();
+        if (reference.length > 0 && !attachmentReferences.includes(reference)) {
+          attachmentReferences.push(reference);
+        }
+      }
+    });
+
+    // Extract references to previous communications
+    const previousEmailReferences: string[] = [];
+    const previousEmailPatterns = [
+      /as (mentioned|discussed|per|stated|referenced|indicated) (in|on) ([^.?!]+)/i,
+      /following (up on|our) ([^.?!]+)/i,
+      /regarding our ([^.?!]+)/i,
+      /in our (previous|last|earlier) ([^.?!]+)/i,
+      /thank you for your ([^.?!]+)/i,
+      /in response to your ([^.?!]+)/i
+    ];
+    
+    previousEmailPatterns.forEach(pattern => {
+      const matches = text.match(pattern);
+      if (matches && matches.length > 1) {
+        const reference = matches[matches.length - 1].trim();
+        if (reference.length > 0 && !previousEmailReferences.includes(reference)) {
+          previousEmailReferences.push(reference);
+        }
+      }
+    });
+
+    // Extract key topics from the email
+    const keyTopics: string[] = [];
+    
+    // Try to extract topics from subject
+    const subjectMatch = text.match(/subject:?\s+(.*?)(\n|$)/i);
+    const subject = subjectMatch ? subjectMatch[1].trim() : 'No subject';
+    
+    // Add subject words as potential topics
+    const subjectWords = subject.split(/\s+/).filter(word => 
+      word.length > 3 && 
+      !/^(the|and|or|for|with|about|from|your|our|their|his|her|its|this|that|these|those|re|fwd)$/i.test(word)
+    );
+    
+    subjectWords.forEach(word => {
+      if (!keyTopics.includes(word)) {
+        keyTopics.push(word);
+      }
+    });
+    
+    // Extract topics from email body by finding repeated important words
+    const wordFrequency = {};
+    words.forEach(word => {
+      if (word.length > 4 && 
+          !/^(the|and|or|for|with|about|from|your|our|their|his|her|its|this|that|these|those)$/i.test(word)) {
+        wordFrequency[word] = (wordFrequency[word] || 0) + 1;
+      }
+    });
+    
+    // Get top 5 frequent words as topics
+    const frequentWords = Object.entries(wordFrequency)
+      .sort((a, b) => (b[1] as number) - (a[1] as number))
+      .slice(0, 5)
+      .map(entry => entry[0]);
+    
+    frequentWords.forEach(word => {
+      if (!keyTopics.includes(word) && keyTopics.length < 5) {
+        keyTopics.push(word);
+      }
+    });
+
+    // Determine relationship context
+    let relationshipContext: 'personal' | 'professional' | 'unknown' = 'unknown';
+    const professionalWords = [
+      'meeting', 'project', 'deadline', 'report', 'business', 'client',
+      'company', 'office', 'work', 'job', 'team', 'department', 'manager',
+      'employee', 'supervisor', 'colleague', 'professional'
+    ];
+    
+    const personalWords = [
+      'family', 'friend', 'personal', 'vacation', 'holiday', 'weekend',
+      'dinner', 'lunch', 'coffee', 'drinks', 'party', 'celebration',
+      'birthday', 'anniversary', 'wedding', 'home'
+    ];
+    
+    const professionalCount = words.filter(word => professionalWords.includes(word)).length;
+    const personalCount = words.filter(word => personalWords.includes(word)).length;
+    
+    if (professionalCount > personalCount) {
+      relationshipContext = 'professional';
+    } else if (personalCount > professionalCount) {
+      relationshipContext = 'personal';
+    }
+
+    // Calculate overall confidence score with improved algorithm
+    const confidence = Math.min(
+      (sentimentConfidence * 0.2 + 
+       (questions.length > 0 ? 0.15 : 0) +
+       (actionItems.length > 0 ? 0.15 : 0) +
+       (deadlines.length > 0 ? 0.15 : 0) +
+       (hasAttachments ? 0.1 : 0) +
+       (subject !== 'No subject' ? 0.15 : 0) +
+       (senderEmail !== 'unknown@email.com' ? 0.1 : 0)) / 1.0,
+      0.95
+    );
+
+    // Determine if human review is needed with improved criteria
+    const requiresHumanReview = 
+      urgency === 'high' ||
+      sentiment.tone === 'negative' ||
+      questions.length > 3 ||
+      actionItems.length > 3 ||
+      deadlines.some(d => d.isPriority) ||
+      confidence < 0.5;
+
+    let reviewReason: string | undefined;
+    if (requiresHumanReview) {
+      if (urgency === 'high') reviewReason = 'High urgency email requires attention';
+      else if (sentiment.tone === 'negative') reviewReason = 'Negative sentiment detected';
+      else if (questions.length > 3) reviewReason = 'Complex email with multiple questions';
+      else if (actionItems.length > 3) reviewReason = 'Multiple action items need verification';
+      else if (deadlines.some(d => d.isPriority)) reviewReason = 'Priority deadline requires attention';
+      else if (confidence < 0.5) reviewReason = 'Low confidence in analysis';
+    }
+
     return {
+      sender: { 
+        name: senderName, 
+        email: senderEmail,
+        company: company
+      },
+      subject,
+      intent,
+      primaryPurpose,
+      questions,
+      actionItems,
+      deadlines,
+      previousEmailReferences,
+      urgency,
+      importance,
+      formality,
       sentiment,
-      keyPoints: keyPoints.length > 0 ? keyPoints : ['No key points identified'],
-      actionItems: actionItems.length > 0 ? actionItems : ['No action items identified'],
-      urgency
+      hasAttachments,
+      attachmentReferences,
+      timestamp: new Date(),
+      metadata: {
+        confidence,
+        requiresHumanReview,
+        reviewReason,
+        relationshipContext,
+        keyTopics
+      }
     };
+
   } catch (error) {
     console.error('Error analyzing email:', error);
     return {
-      sentiment: 'neutral',
-      keyPoints: ['Error analyzing email content'],
+      sender: { email: 'unknown@email.com' },
+      subject: 'Error Processing Email',
+      intent: 'information',
+      primaryPurpose: 'Unable to determine',
+      questions: [],
       actionItems: [],
-      urgency: 'low'
+      deadlines: [],
+      previousEmailReferences: [],
+      urgency: 'low',
+      importance: 'medium',
+      formality: 'neutral',
+      sentiment: { tone: 'neutral', confidence: 0 },
+      hasAttachments: false,
+      attachmentReferences: [],
+      timestamp: new Date(),
+      metadata: {
+        confidence: 0,
+        requiresHumanReview: true,
+        reviewReason: 'Error analyzing email content',
+        keyTopics: []
+      }
     };
   }
 };
@@ -672,40 +1398,157 @@ export const generateTextCompletion = async (text: string): Promise<string> => {
  */
 export const generateSmartReplies = async (emailContent: string): Promise<string[]> => {
   try {
-    // Simulate AI processing time
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // First analyze the email to understand its contents
+    const analysis = await analyzeEmail(emailContent);
     
-    // Default smart replies for demo purposes
-    const replies = [
-      "Thank you for sharing this information. I'll review it and get back to you with my thoughts soon.",
-      "I appreciate your email. Let's schedule a call to discuss this in more detail at your convenience.",
-      "Thanks for reaching out. I've noted your request and will prioritize it accordingly."
+    // Create targeted, contextual replies based on email analysis
+    let replies: string[] = [];
+    
+    // Intent-based replies with contextual elements
+    switch (analysis.intent) {
+      case 'request':
+        if (analysis.questions.length > 0) {
+          // Question handling
+          const questionSample = analysis.questions.length > 0 ? analysis.questions[0] : '';
+          const shortQuestion = questionSample.length > 30 
+            ? questionSample.substring(0, 30).replace(/\?$/, '') + '...' 
+            : questionSample.replace(/\?$/, '');
+          
+          if (analysis.questions.length === 1) {
+            replies.push(`I'll address your question about ${shortQuestion} shortly after gathering the information needed.`);
+            
+            if (analysis.urgency === 'high') {
+              replies.push(`I understand your question about ${shortQuestion} is time-sensitive. I'll prioritize this and get back to you today.`);
+            } else {
+              replies.push(`Thanks for asking about ${shortQuestion}. Let me research this and I'll provide a thorough answer.`);
+            }
+          } else {
+            replies.push(`I'll answer each of your ${analysis.questions.length} questions in detail. Let me gather the information I need first.`);
+            replies.push(`Thanks for your questions. I'll take some time to provide complete answers to all ${analysis.questions.length} points you raised.`);
+          }
+        } else if (analysis.actionItems.length > 0) {
+          // Action item handling
+          const actionSample = analysis.actionItems.length > 0 ? analysis.actionItems[0] : '';
+          const shortAction = actionSample.length > 35 
+            ? actionSample.substring(0, 35) + '...' 
+            : actionSample;
+            
+          replies.push(`I'll take care of your request${analysis.actionItems.length > 1 ? 's' : ''} promptly and provide an update when complete.`);
+          
+          if (analysis.actionItems.length === 1) {
+            replies.push(`I'll handle the ${shortAction.replace(/^please\s+/i, '')} and let you know when it's done.`);
+          } else {
+            replies.push(`I've noted all ${analysis.actionItems.length} action items and will begin working on them immediately.`);
+          }
+        }
+        break;
+        
+      case 'meeting':
+        // Meeting scheduling with specific details
+        if (analysis.deadlines.length > 0) {
+          // There's a suggested time
+          const meetingTime = analysis.deadlines[0].text
+            .replace(/^(by|due|deadline[:\s]+|no later than|before|complete by)/i, '')
+            .trim();
+            
+          replies.push(`I'm available for the meeting${meetingTime ? ` on ${meetingTime}` : ''}. I've added it to my calendar.`);
+          replies.push(`The meeting time${meetingTime ? ` (${meetingTime})` : ''} works for me. Looking forward to our discussion.`);
+        } else {
+          // No specific time mentioned
+          replies.push(`I'd be happy to meet. Would Monday at 2pm or Tuesday at 10am work for you?`);
+          replies.push(`Yes, let's schedule a meeting. I'm available most mornings this week, or Friday afternoon.`);
+          replies.push(`I'd welcome the opportunity to discuss this. Please suggest a few times that work for you.`);
+        }
+        break;
+        
+      case 'followUp':
+        // Follow-up responses with context awareness
+        replies.push(`Thanks for following up. I'm still working on this and will have an update for you by tomorrow.`);
+        replies.push(`I appreciate the reminder. I'll prioritize this and get back to you with a status update today.`);
+        
+        if (analysis.previousEmailReferences.length > 0) {
+          const reference = analysis.previousEmailReferences[0];
+          replies.push(`Regarding our previous ${reference}, I've made progress and will share the details shortly.`);
+        }
+        break;
+        
+      case 'introduction':
+        // Introduction responses
+        replies.push(`It's great to connect with you! I'd be happy to schedule some time to discuss how we might work together.`);
+        replies.push(`Thank you for reaching out. Your background is impressive, and I'd be interested in exploring potential collaboration.`);
+        replies.push(`I appreciate the introduction. I'd welcome the opportunity to learn more about your work and discuss areas of mutual interest.`);
+        break;
+        
+      case 'information':
+        // Information sharing responses
+        if (analysis.hasAttachments) {
+          replies.push(`Thank you for sharing this information and the attached documents. I'll review them promptly.`);
+        } else {
+          replies.push(`I appreciate you keeping me informed. This information is helpful for our ongoing work.`);
+        }
+        
+        if (analysis.sentiment.tone === 'positive') {
+          replies.push(`Great news! Thank you for the update. I'm pleased to hear about the progress.`);
+        } else if (analysis.sentiment.tone === 'negative') {
+          replies.push(`Thank you for bringing this to my attention. I understand the challenges and will consider how we might address them.`);
+        } else {
+          replies.push(`Thanks for sharing this information. I've noted the details and will keep them in mind going forward.`);
+        }
+        break;
+    }
+    
+    // Add urgency-appropriate responses
+    if (analysis.urgency === 'high' && replies.length < 3) {
+      replies.push(`I understand this is urgent. I'll address it immediately and get back to you within the next few hours.`);
+      replies.push(`This has my immediate attention. I'll prioritize it and respond as soon as possible.`);
+    }
+    
+    // Add deadline acknowledgment if applicable
+    if (analysis.deadlines.length > 0 && replies.length < 3) {
+      const deadline = analysis.deadlines[0].text
+        .replace(/^(by|due|deadline[:\s]+|no later than|before|complete by)/i, '')
+        .trim();
+        
+      replies.push(`I've noted the ${deadline} deadline and will ensure everything is completed on time.`);
+    }
+    
+    // Add sentiment-appropriate responses if needed
+    if (replies.length < 3) {
+      if (analysis.sentiment.tone === 'positive' && analysis.sentiment.confidence > 0.6) {
+        replies.push(`Thanks for your positive message! I'll respond with more details shortly.`);
+      } else if (analysis.sentiment.tone === 'negative' && analysis.sentiment.confidence > 0.6) {
+        replies.push(`I understand your concerns and will address them thoughtfully in my response.`);
+      }
+    }
+    
+    // Add formality-appropriate responses if needed
+    if (replies.length < 3) {
+      if (analysis.formality === 'formal') {
+        replies.push(`Thank you for your correspondence. I will review the matter thoroughly and respond in kind.`);
+      } else if (analysis.formality === 'casual') {
+        replies.push(`Thanks for your note! I'll get back to you with more info soon.`);
+      }
+    }
+    
+    // Ensure we have at least 3 replies
+    const defaultReplies = [
+      "Thank you for your email. I'll review this and respond in detail shortly.",
+      "I appreciate you reaching out. I'll get back to you on this as soon as possible.",
+      "Thanks for your message. I'll make this a priority and respond soon."
     ];
     
-    // Conditionally generate different replies based on content patterns
-    if (emailContent.match(/meeting|schedule|appointment|call/i)) {
-      return [
-        "I'd be happy to meet. How about Tuesday at 2pm?",
-        "Thanks for suggesting a meeting. I'm available this Thursday afternoon if that works for you.",
-        "I can make time for a quick call tomorrow. Would 10am work for you?"
-      ];
+    while (replies.length < 3) {
+      const nextDefault = defaultReplies[replies.length % defaultReplies.length];
+      if (!replies.includes(nextDefault)) {
+        replies.push(nextDefault);
+      } else {
+        // If we've used all defaults, create variations
+        replies.push(`Thank you for your email. I'll respond to you by ${analysis.urgency === 'high' ? 'end of day' : 'tomorrow'}.`);
+      }
     }
     
-    if (emailContent.match(/question|help|assist|advice/i)) {
-      return [
-        "I'd be happy to help with this. Let me look into it and get back to you by tomorrow.",
-        "Thanks for your question. Based on my experience, I would recommend...",
-        "Great question. Let me connect you with our specialist who can provide more detailed information."
-      ];
-    }
-    
-    if (emailContent.match(/urgent|asap|emergency|immediate/i)) {
-      return [
-        "I'll address this right away. Give me 30 minutes to resolve this issue.",
-        "I understand the urgency. I've prioritized this and will call you shortly to discuss.",
-        "Thank you for flagging this urgent matter. I'm working on it now and will update you soon."
-      ];
-    }
+    // Make sure we don't have duplicates and don't return more than 3
+    replies = [...new Set(replies)].slice(0, 3);
     
     return replies;
   } catch (error) {
@@ -722,20 +1565,25 @@ export const summarizeEmailBriefly = async (emailContent: string): Promise<strin
     // Simulate AI processing time
     await new Promise(resolve => setTimeout(resolve, 1200));
     
-    // Default summary for demo purposes
-    let summary = "This email discusses project updates and requests feedback on the proposed timeline.";
+    // In a real implementation, this would call an actual AI model with the prompt
+    // For this demo, we'll simulate different responses based on the content
+    const prompt = "Summarize this email clearly and professionally for a human reader. Focus only on the visible text content and ignore all code, images, CSS, HTML tags, or layout instructions. Do not include any media references, style properties, or technical markup. Your summary should read like a note that explains what the email is about.";
     
-    // Generate different summaries based on content patterns
+    // Generate summary based on content patterns
+    let summary = "";
+    
     if (emailContent.match(/meeting|schedule|appointment|call/i)) {
-      summary = "Request to schedule a meeting to discuss project progress and next steps.";
+      summary = "Meeting scheduled for next Tuesday at 2pm to discuss Q3 planning. You need to prepare a brief overview of your department's progress.";
     } else if (emailContent.match(/proposal|budget|cost|price/i)) {
-      summary = "Proposal with pricing details and budget considerations for the project.";
+      summary = "New project proposal with $15k budget needs your approval by Friday. Main costs are for additional developer resources.";
     } else if (emailContent.match(/deadline|timeline|delay/i)) {
-      summary = "Update on project timeline with revised deadlines and explanation for changes.";
+      summary = "Project deadline extended to Oct 30th due to technical issues. Team needs your input on revised milestones by tomorrow.";
     } else if (emailContent.match(/report|performance|metrics|results/i)) {
-      summary = "Monthly performance report showing key metrics and results analysis.";
+      summary = "Q2 performance exceeded targets by 12%. Sales in western region underperforming - meeting scheduled to discuss strategy changes.";
     } else if (emailContent.match(/issue|problem|error|fix/i)) {
-      summary = "Details about technical issues encountered and proposed solutions.";
+      summary = "Critical server issue resolved. Outage lasted 45 mins. Post-mortem scheduled for Thursday, your attendance requested.";
+    } else {
+      summary = "Team announced new software release for next week. You need to test your integration by Friday and report any issues.";
     }
     
     return summary;
@@ -758,7 +1606,7 @@ export const prioritizeEmail = async (emailContent: string): Promise<{
     
     // Default result
     let result = {
-      priority: 'Medium' as const,
+      priority: 'Medium' as 'High' | 'Medium' | 'Low',
       justification: "Standard business communication with no urgent elements."
     };
     
@@ -797,4 +1645,4 @@ export default {
   generateSmartReplies,
   summarizeEmailBriefly,
   prioritizeEmail
-}; 
+};

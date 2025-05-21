@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useSummarizeEmailBriefly } from '@/services/ai/hooks';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { RefreshCw, Copy, CheckCheck, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -50,6 +50,9 @@ const EmailSummarizer: React.FC = () => {
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="text-xl font-bold">📩 Email Summarizer</CardTitle>
+        <CardDescription>
+          Creates a clear, professional summary of the email content, focusing only on the visible text
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>

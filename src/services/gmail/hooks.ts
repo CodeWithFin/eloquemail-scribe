@@ -132,6 +132,21 @@ export const useGmailMessageContent = (messageId: string | null) => {
       ? fetchGmailMessageContent(messageId, token) 
       : Promise.reject('No message ID or token'),
     enabled: !!messageId && !!token,
+    retry: (failureCount, error) => {
+      // Retry up to 3 times unless it's a known permanent error
+      if (error instanceof Error) {
+        const permanentErrors = [
+          'MESSAGE_NOT_FOUND',
+          'PERMISSION_DENIED',
+          'EMPTY_MESSAGE'
+        ];
+        if (permanentErrors.includes(error.message)) {
+          return false;
+        }
+      }
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff up to 30s
   });
 };
 

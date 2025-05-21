@@ -101,7 +101,7 @@ const AIToolbar: React.FC<AIToolbarProps> = ({ emailContent, onUpdate }) => {
           onUpdate(result);
           toast({
             title: "Email shortened",
-            description: "Your email has been condensed while preserving key points."
+            description: "Your email has been condensed to focus on essential content."
           });
           break;
       }

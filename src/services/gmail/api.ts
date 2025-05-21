@@ -234,40 +234,61 @@ export const sendGmailMessage = async (draft: EmailDraft, token: string): Promis
  * Get the full message body content from Gmail API
  */
 export const fetchGmailMessageContent = async (messageId: string, token: string): Promise<string> => {
-  const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
+  try {
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      const errorMessage = errorData?.error?.message || 'Unknown error';
+      
+      if (response.status === 404) {
+        throw new Error('MESSAGE_NOT_FOUND');
+      } else if (response.status === 403) {
+        throw new Error('PERMISSION_DENIED');
+      } else if (response.status === 401) {
+        throw new Error('INVALID_TOKEN');
+      }
+      throw new Error(`Failed to fetch Gmail message content: ${errorMessage}`);
     }
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch Gmail message content');
-  }
-  
-  const message = await response.json();
-  
-  // Extract the message body - this handles both simple and multipart messages
-  let messageBody = '';
-  
-  if (message.payload) {
-    if (message.payload.body && message.payload.body.data) {
-      // Simple message with body directly in the payload
-      messageBody = decodeBase64UrlSafe(message.payload.body.data);
-    } else if (message.payload.parts) {
-      // Multipart message
-      for (const part of message.payload.parts) {
-        if (part.mimeType === 'text/html' && part.body && part.body.data) {
-          messageBody = decodeBase64UrlSafe(part.body.data);
-          break;
-        } else if (part.mimeType === 'text/plain' && part.body && part.body.data) {
-          messageBody = decodeBase64UrlSafe(part.body.data);
-          // Continue searching for HTML part
+    
+    const message = await response.json();
+    
+    // Extract the message body - this handles both simple and multipart messages
+    let messageBody = '';
+    
+    if (message.payload) {
+      if (message.payload.body && message.payload.body.data) {
+        // Simple message with body directly in the payload
+        messageBody = decodeBase64UrlSafe(message.payload.body.data);
+      } else if (message.payload.parts) {
+        // Multipart message
+        for (const part of message.payload.parts) {
+          if (part.mimeType === 'text/html' && part.body && part.body.data) {
+            messageBody = decodeBase64UrlSafe(part.body.data);
+            break;
+          } else if (part.mimeType === 'text/plain' && part.body && part.body.data) {
+            messageBody = decodeBase64UrlSafe(part.body.data);
+            // Continue searching for HTML part
+          }
         }
       }
     }
+
+    if (!messageBody) {
+      throw new Error('EMPTY_MESSAGE');
+    }
+    
+    return messageBody;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to fetch Gmail message content');
   }
-  
-  return messageBody;
 };
 
 /**

@@ -1,13 +1,18 @@
-
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import AIToolbar from './AIToolbar';
 import Glass from '../ui-custom/Glass';
 import Button from '../ui-custom/Button';
+import ScheduleDialog from './ScheduleDialog';
 import { Send, Save, Clock, ArrowRight, Users } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useScheduleEmail } from '@/services/scheduling/hooks';
+import { useNavigate } from 'react-router-dom';
 
 const EmailEditor = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const scheduleEmail = useScheduleEmail();
+  
   const [emailData, setEmailData] = useState({
     to: '',
     cc: '',
@@ -19,6 +24,7 @@ const EmailEditor = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isScheduleDialogOpen, setIsScheduleDialogOpen] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -72,6 +78,43 @@ const EmailEditor = () => {
   const handleAIUpdate = (newBody: string) => {
     setEmailData(prev => ({ ...prev, body: newBody }));
   };
+
+  const handleSchedule = useCallback(async (scheduledTime: string) => {
+    if (!emailData.to || !emailData.subject || !emailData.body) {
+      toast({
+        title: "Cannot schedule email",
+        description: "Please fill in the recipient, subject, and message fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await scheduleEmail.mutateAsync({
+        email: {
+          to: emailData.to,
+          cc: emailData.cc,
+          bcc: emailData.bcc,
+          subject: emailData.subject,
+          body: emailData.body
+        },
+        scheduledTime
+      });
+
+      toast({
+        title: "Email scheduled successfully",
+        description: "Your email has been scheduled."
+      });
+      setIsScheduleDialogOpen(false);
+      navigate('/scheduled-emails');
+    } catch (error) {
+      toast({
+        title: "Failed to schedule email",
+        description: "An error occurred while scheduling your email.",
+        variant: "destructive"
+      });
+    }
+  }, [emailData, scheduleEmail, toast, navigate]);
 
   return (
     <div className="w-full max-w-4xl mx-auto animate-fade-up">
@@ -200,12 +243,7 @@ const EmailEditor = () => {
               <Button
                 variant="ghost"
                 iconLeft={<Clock size={18} />}
-                onClick={() => {
-                  toast({
-                    title: "Schedule",
-                    description: "Scheduling functionality is not implemented in this demo."
-                  });
-                }}
+                onClick={() => setIsScheduleDialogOpen(true)}
               >
                 Schedule
               </Button>
@@ -221,6 +259,12 @@ const EmailEditor = () => {
           </div>
         </div>
       </Glass>
+
+      <ScheduleDialog 
+        isOpen={isScheduleDialogOpen}
+        onClose={() => setIsScheduleDialogOpen(false)}
+        onSchedule={handleSchedule}
+      />
     </div>
   );
 };

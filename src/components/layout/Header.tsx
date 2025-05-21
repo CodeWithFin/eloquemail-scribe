@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Button from '../ui-custom/Button';
-import { Menu, X, Settings, Sparkles } from 'lucide-react';
+import { Menu, X, Settings, Sparkles, FileText, Search, Calendar, AlertCircle, Eye, CloudOff } from 'lucide-react';
 import { ThemeToggle } from '../ui/theme-toggle';
+import { executeCommand } from '@/services/commandPalette';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -70,6 +71,18 @@ const Header = () => {
               
               {isLoggedIn ? (
                 <div className="flex items-center space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center"
+                    onClick={() => executeCommand('command.palette.open')}
+                  >
+                    <Search className="h-4 w-4 mr-1" />
+                    <span>Search</span>
+                    <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                      <span className="text-xs">⌘</span>K
+                    </kbd>
+                  </Button>
                   <Link to="/dashboard">
                     <Button variant="ghost" size="sm">Dashboard</Button>
                   </Link>
@@ -80,6 +93,36 @@ const Header = () => {
                     <Button variant="ghost" size="sm">
                       <Sparkles className="h-4 w-4 mr-1" />
                       AI Tools
+                    </Button>
+                  </Link>
+                  <Link to="/templates">
+                    <Button variant="ghost" size="sm">
+                      <FileText className="h-4 w-4 mr-1" />
+                      Templates
+                    </Button>
+                  </Link>
+                  <Link to="/scheduled">
+                    <Button variant="ghost" size="sm">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      Scheduled
+                    </Button>
+                  </Link>
+                  <Link to="/follow-ups">
+                    <Button variant="ghost" size="sm">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      Follow-Ups
+                    </Button>
+                  </Link>
+                  <Link to="/tracked">
+                    <Button variant="ghost" size="sm">
+                      <Eye className="h-4 w-4 mr-1" />
+                      Tracking
+                    </Button>
+                  </Link>
+                  <Link to="/offline">
+                    <Button variant="ghost" size="sm">
+                      <CloudOff className="h-4 w-4 mr-1" />
+                      Offline
                     </Button>
                   </Link>
                   <Link to="/settings">
@@ -135,6 +178,18 @@ const Header = () => {
               
               {isLoggedIn ? (
                 <div className="flex flex-col space-y-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <Button 
+                    variant="outline" 
+                    fullWidth
+                    className="flex items-center justify-center"
+                    onClick={() => executeCommand('command.palette.open')}
+                  >
+                    <Search className="h-4 w-4 mr-1" />
+                    <span>Search</span>
+                    <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                      <span className="text-xs">⌘</span>K
+                    </kbd>
+                  </Button>
                   <Link to="/dashboard" className="w-full">
                     <Button variant="ghost" fullWidth>Dashboard</Button>
                   </Link>
@@ -145,6 +200,36 @@ const Header = () => {
                     <Button variant="ghost" fullWidth>
                       <Sparkles className="h-4 w-4 mr-1" />
                       AI Tools
+                    </Button>
+                  </Link>
+                  <Link to="/templates" className="w-full">
+                    <Button variant="ghost" fullWidth>
+                      <FileText className="h-4 w-4 mr-1" />
+                      Templates
+                    </Button>
+                  </Link>
+                  <Link to="/scheduled" className="w-full">
+                    <Button variant="ghost" fullWidth>
+                      <Calendar className="h-4 w-4 mr-1" />
+                      Scheduled
+                    </Button>
+                  </Link>
+                  <Link to="/follow-ups" className="w-full">
+                    <Button variant="ghost" fullWidth>
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      Follow-Ups
+                    </Button>
+                  </Link>
+                  <Link to="/tracked" className="w-full">
+                    <Button variant="ghost" fullWidth>
+                      <Eye className="h-4 w-4 mr-1" />
+                      Tracking
+                    </Button>
+                  </Link>
+                  <Link to="/offline" className="w-full">
+                    <Button variant="ghost" fullWidth>
+                      <CloudOff className="h-4 w-4 mr-1" />
+                      Offline
                     </Button>
                   </Link>
                   <Link to="/settings" className="w-full">
