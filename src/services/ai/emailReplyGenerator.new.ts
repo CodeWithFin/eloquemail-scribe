@@ -75,14 +75,11 @@ function generateGreeting(analysis: EmailAnalysis, options: EmailGenerationOptio
 
   const senderName = analysis.sender.name?.split(' ')[0] || '';
   
-  // Safely handle tone string with type checking
-  const tone = options.tone as string;
-  
-  if (tone === 'formal') {
+  if (options.tone === 'formal') {
     return `Dear ${senderName || 'Sir/Madam'}`;
   }
   
-  if (tone === 'persuasive') {
+  if (options.tone === 'persuasive') {
     return `Dear ${senderName || 'Colleague'}`;
   }
   
@@ -156,12 +153,13 @@ export function generateQuestionResponses(
     }
   }
 ): string {
+  if (params.questions.length === 0) return '';
+  
   const questions = params.questions;
   const options = {
     tone: params.responseSettings.tone,
     length: params.responseSettings.length
   } as EmailGenerationOptions;
-  if (questions.length === 0) return '';
   
   let responses = '';
   
@@ -224,6 +222,7 @@ export function generateMeetingResponse(
     tone: params.responseSettings.tone || 'friendly',
     length: params.responseSettings.length || 'medium'
   } as EmailGenerationOptions;
+
   const toneResponses = {
     formal: "I would be pleased to schedule a meeting to discuss this matter.",
     friendly: "I'd be happy to meet and chat about this!",
@@ -287,6 +286,7 @@ export function generateFollowUpResponse(
     tone: params.responseSettings.tone || 'friendly',
     length: params.responseSettings.length || 'medium'
   } as EmailGenerationOptions;
+  
   const status = {
     formal: "I can provide the following status update regarding your inquiry:",
     friendly: "Here's where we stand on this:",

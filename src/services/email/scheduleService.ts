@@ -102,24 +102,39 @@ export const updateScheduledEmail = (
 };
 
 // Check if there are any emails that need to be sent
-export const checkScheduledEmails = (): void => {
+export const checkScheduledEmails = (): ScheduledEmail[] => {
   const emails = loadScheduledEmails();
   const now = new Date();
   let updated = false;
+  const sentEmails: ScheduledEmail[] = [];
   
   const updatedEmails = emails.map(email => {
     if (email.status === 'pending' && new Date(email.scheduledTime) <= now) {
       updated = true;
-      // In a real app, we'd actually send the email here
-      // For the demo, we'll just mark it as sent
-      return { ...email, status: 'sent' as const };
+      // In a real app, we'd actually send the email here via an API
+      // For the demo, we'll just mark it as sent and return it for notification
+      const sentEmail = { ...email, status: 'sent' as const };
+      sentEmails.push(sentEmail);
+      return sentEmail;
     }
     return email;
   });
   
   if (updated) {
     saveScheduledEmails(updatedEmails);
+    
+    // Notify user about sent emails
+    sentEmails.forEach(email => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Email Sent', {
+          body: `Your scheduled email "${email.subject}" has been sent.`,
+          icon: '/favicon.ico'
+        });
+      }
+    });
   }
+  
+  return sentEmails;
 };
 
 // Setup a periodic check for scheduled emails
@@ -129,9 +144,24 @@ let checkInterval: ReturnType<typeof setInterval> | null = null;
 export const setupScheduledEmailCheck = (): void => {
   if (checkInterval) return;
   
+  // Request notification permission if needed
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  
+  // Initial check
+  checkScheduledEmails();
+  
   // Check every minute for emails that need to be sent
   checkInterval = setInterval(() => {
-    checkScheduledEmails();
+    const sentEmails = checkScheduledEmails();
+    
+    // If emails were sent, trigger a custom event that parts of the UI can listen for
+    if (sentEmails.length > 0) {
+      window.dispatchEvent(new CustomEvent('emailsent', { 
+        detail: { emails: sentEmails } 
+      }));
+    }
   }, 60000); // 60 seconds
 };
 

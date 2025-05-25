@@ -3,9 +3,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Info, BarChart, Database, RefreshCcw, Shield } from 'lucide-react';
+import { Sparkles, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import errorHandling from '@/services/ai/errorHandling';
 import loggingService from '@/services/ai/loggingService';
@@ -15,6 +14,13 @@ interface AISettingsProps {
   onSave?: () => void;
 }
 
+interface ErrorStats {
+  totalRequests: number;
+  failedRequests: number;
+  lastErrorTime?: string | null;
+  lastErrorMessage?: string;
+}
+
 const AISettings: React.FC<AISettingsProps> = ({ onSave }) => {
   const { toast } = useToast();
   const [isAIEnabled, setIsAIEnabled] = useState<boolean>(true); // Default to enabled
@@ -22,7 +28,7 @@ const AISettings: React.FC<AISettingsProps> = ({ onSave }) => {
   const [cacheEnabled, setCacheEnabled] = useState<boolean>(true); // Default to enabled
   const [loggingEnabled, setLoggingEnabled] = useState<boolean>(true); // Default to enabled
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(50); // Default to 50%
-  const [errorStats, setErrorStats] = useState<any>(null);
+  const [errorStats, setErrorStats] = useState<ErrorStats | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   
   // Load saved settings on component mount
@@ -48,9 +54,21 @@ const AISettings: React.FC<AISettingsProps> = ({ onSave }) => {
     setIsSaving(true);
     
     try {
-      // Save AI enabled status
+      // Save all settings
       localStorage.setItem('ai_features_enabled', isAIEnabled.toString());
       localStorage.setItem('auto_generate_content', autoGenerate.toString());
+      localStorage.setItem('ai_cache_enabled', cacheEnabled.toString());
+      localStorage.setItem('ai_logging_enabled', loggingEnabled.toString());
+      localStorage.setItem('ai_confidence_threshold', confidenceThreshold.toString());
+      
+      // Apply settings to services
+      if (cacheEnabled !== (localStorage.getItem('ai_cache_enabled') !== 'false')) {
+        cacheService.setEnabled(cacheEnabled);
+      }
+      
+      if (loggingEnabled !== (localStorage.getItem('ai_logging_enabled') !== 'false')) {
+        loggingService.setEnabled(loggingEnabled);
+      }
       
       // Clean up any old API keys
       localStorage.removeItem('gemini_api_key');
@@ -73,6 +91,25 @@ const AISettings: React.FC<AISettingsProps> = ({ onSave }) => {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleClearErrorStats = () => {
+    try {
+      errorHandling.clearErrorStats();
+      setErrorStats(errorHandling.getErrorStats());
+      
+      toast({
+        title: "Error Stats Cleared",
+        description: "AI error statistics have been reset successfully.",
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: "Error Clearing Stats",
+        description: "There was a problem clearing the error statistics.",
+        variant: "destructive"
+      });
     }
   };
   
@@ -122,24 +159,97 @@ const AISettings: React.FC<AISettingsProps> = ({ onSave }) => {
         <div className="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-md flex items-start">
           <Info className="h-5 w-5 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
           <p className="text-sm text-blue-700">
-            EloquEmail includes built-in AI assistance to help you create better emails.
+            Email Buddy includes built-in AI assistance to help you create better emails.
             Our AI can summarize threads, suggest replies, analyze sentiment, and more.
           </p>
         </div>
         
         {isAIEnabled && (
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium">Available AI Features:</h3>
-            <ul className="text-sm text-gray-600 space-y-2 list-disc pl-5">
-              <li>Email summarization - create clear, professional summaries of emails</li>
-              <li>Smart reply suggestions - generate context-aware reply options</li>
-              <li>Email composition - create well-formatted emails quickly</li>
-              <li>Content improvement - enhance grammar and clarity</li>
-              <li>Email analysis - identify key points and action items</li>
-              <li>Tone adjustment - formal, friendly, assertive, and more</li>
-              <li>Auto-generation - create email content based on subject line</li>
-            </ul>
-          </div>
+          <>
+            <div className="space-y-4 mt-4">
+              <h3 className="text-sm font-medium">Advanced Settings</h3>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="cache-toggle" className="font-medium">Enable Response Caching</Label>
+                  <Switch 
+                    id="cache-toggle" 
+                    checked={cacheEnabled} 
+                    onCheckedChange={setCacheEnabled} 
+                  />
+                </div>
+                <p className="text-sm text-gray-500">
+                  Cache AI responses for faster performance and reduced processing time
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="logging-toggle" className="font-medium">Enable AI Feedback Collection</Label>
+                  <Switch 
+                    id="logging-toggle" 
+                    checked={loggingEnabled} 
+                    onCheckedChange={setLoggingEnabled} 
+                  />
+                </div>
+                <p className="text-sm text-gray-500">
+                  Help us improve by allowing anonymous collection of AI usage data
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confidence-slider" className="font-medium">AI Confidence Threshold: {confidenceThreshold}%</Label>
+                <Slider
+                  id="confidence-slider"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={[confidenceThreshold]}
+                  onValueChange={(value) => setConfidenceThreshold(value[0])}
+                  className="py-4"
+                />
+                <p className="text-sm text-gray-500">
+                  Set the minimum confidence level required for AI-generated content
+                </p>
+              </div>
+
+              {errorStats && (
+                <div className="space-y-2 border rounded-md p-4 bg-gray-50 dark:bg-gray-900/30">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium">AI Error Statistics</Label>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleClearErrorStats}
+                    >
+                      Clear Stats
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm mt-2">
+                    <div>Total requests: {errorStats.totalRequests || 0}</div>
+                    <div>Failed requests: {errorStats.failedRequests || 0}</div>
+                    <div>Success rate: {errorStats.totalRequests ? 
+                      (((errorStats.totalRequests - errorStats.failedRequests) / errorStats.totalRequests) * 100).toFixed(1) + '%' 
+                      : 'N/A'}</div>
+                    <div>Last error: {errorStats.lastErrorTime ? new Date(errorStats.lastErrorTime).toLocaleString() : 'None'}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Available AI Features:</h3>
+              <ul className="text-sm text-gray-600 space-y-2 list-disc pl-5">
+                <li>Email summarization - create clear, professional summaries of emails</li>
+                <li>Smart reply suggestions - generate context-aware reply options</li>
+                <li>Email composition - create well-formatted emails quickly</li>
+                <li>Content improvement - enhance grammar and clarity</li>
+                <li>Email analysis - identify key points and action items</li>
+                <li>Tone adjustment - formal, friendly, assertive, and more</li>
+                <li>Auto-generation - create email content based on subject line</li>
+              </ul>
+            </div>
+          </>
         )}
       </CardContent>
       
@@ -156,4 +266,4 @@ const AISettings: React.FC<AISettingsProps> = ({ onSave }) => {
   );
 };
 
-export default AISettings; 
+export default AISettings;

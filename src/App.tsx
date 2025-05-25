@@ -19,7 +19,6 @@ import Templates from "./pages/Templates";
 import ScheduledEmails from "./pages/ScheduledEmails";
 import FollowUps from "./pages/FollowUps";
 import TrackedEmails from "./pages/TrackedEmails";
-import OfflineEmails from "./pages/OfflineEmails";
 import GoogleAuthCallback from "./components/auth/GoogleAuthCallback";
 
 // Create a new QueryClient instance properly
@@ -54,7 +53,6 @@ const App: React.FC = () => {
                   <Route path="/scheduled" element={<ScheduledEmails />} />
                   <Route path="/follow-ups" element={<FollowUps />} />
                   <Route path="/tracked" element={<TrackedEmails />} />
-                  <Route path="/offline" element={<OfflineEmails />} />
                     <Route path="/auth/callback/google" element={<GoogleAuthCallback />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>

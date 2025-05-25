@@ -70,10 +70,20 @@ const safeGenerateFullReply = async (content: string, options: any): Promise<Gen
  * Utility function to check if AI features are properly configured
  */
 export const isAIConfigured = (): boolean => {
-  // AI is always configured now since we're using built-in simulation
-  // Just check if it's not explicitly disabled
-  const aiEnabled = localStorage.getItem('ai_features_enabled') !== 'false';
-  return aiEnabled;
+  // AI is enabled by default for the simulation
+  const aiEnabled = localStorage.getItem('ai_features_enabled');
+  
+  // Only return false if it's explicitly disabled
+  if (aiEnabled === 'false') {
+    return false;
+  }
+  
+  // Initialize as enabled if not set
+  if (aiEnabled === null) {
+    localStorage.setItem('ai_features_enabled', 'true');
+  }
+  
+  return true;
 };
 
 /**

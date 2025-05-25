@@ -5,7 +5,6 @@ import {
   Clock, 
   AlertCircle, 
   BarChart, 
-  Download, 
   Send, 
   Trash2, 
   Archive, 
@@ -25,8 +24,8 @@ const scheduleEmail = () => {
 };
 
 const setFollowUp = () => {
-  console.log('Set follow-up feature to be implemented');
-  // Will be connected to the follow-up tracking functionality
+  // Navigate to follow-ups page
+  window.location.href = '/follow-ups';
 };
 
 const trackEmail = () => {
@@ -38,11 +37,6 @@ const trackEmail = () => {
 const viewTrackedEmails = () => {
   // Navigate to the tracked emails page
   window.location.href = '/tracked';
-};
-
-const enableOfflineMode = () => {
-  // Navigate to offline emails page
-  window.location.href = '/offline';
 };
 
 const registerEmailCommands = () => {
@@ -82,7 +76,7 @@ const registerEmailCommands = () => {
       icon: <BarChart size={16} />,
       keywords: ['follow', 'track', 'pending', 'waiting', 'list'],
       perform: () => {
-        console.log('View follow-ups feature to be implemented');
+        window.location.href = '/follow-ups';
       },
     },
 
@@ -102,25 +96,6 @@ const registerEmailCommands = () => {
       icon: <BarChart size={16} />,
       keywords: ['track', 'read', 'receipt', 'analytics', 'open', 'view', 'stats'],
       perform: viewTrackedEmails,
-    },
-
-    // Offline Mode Commands
-    {
-      id: 'app.offline.enable',
-      title: 'Enable Offline Mode',
-      section: 'Settings',
-      icon: <Download size={16} />,
-      keywords: ['offline', 'local', 'sync', 'download', 'cache'],
-      perform: enableOfflineMode,
-    },
-    {
-      id: 'app.offline.disable',
-      title: 'Disable Offline Mode',
-      section: 'Settings',
-      keywords: ['offline', 'local', 'sync', 'download', 'cache', 'disable', 'off'],
-      perform: () => {
-        console.log('Disable offline mode feature to be implemented');
-      },
     },
 
     // Email Actions

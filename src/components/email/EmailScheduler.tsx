@@ -54,6 +54,17 @@ const EmailScheduler: React.FC<EmailSchedulerProps> = ({
 
   const handleSchedule = () => {
     if (date && time) {
+      // Combine date and time
+      const scheduledDateTime = new Date(date);
+      const [hours, minutes] = time.split(':').map(Number);
+      scheduledDateTime.setHours(hours, minutes, 0, 0);
+      
+      // Ensure the schedule is not in the past
+      if (scheduledDateTime <= new Date()) {
+        alert('Cannot schedule an email in the past. Please select a future date and time.');
+        return;
+      }
+      
       onSchedule({ date, time });
       setOpen(false);
     }
