@@ -1,4 +1,4 @@
-// filepath: /home/finley/start-up/email-buddy2.0/src/components/email/ComposeEmail.tsx
+// filepath: /home/finley/start-up/email-buddy2.0/src/components/email/ComposeEmail.new.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { useSendGmailMessage, useCreateGmailDraft } from '@/services/gmail';
@@ -41,7 +41,6 @@ import {
   FileText,
   Calendar
 } from 'lucide-react';
-import Editor from '../ui-custom/Editor';
 import { toast } from '@/hooks/use-toast';
 import AIFeatureGuide from '../ai/AIFeatureGuide';
 import TemplateInserter from './TemplateInserter';
@@ -57,6 +56,7 @@ import {
   simulateLinkClick
 } from '@/services/email/trackingService';
 import { useScheduledEmails, useUpdateScheduledEmail } from '@/services/scheduling/hooks';
+// Import new components
 import AttachmentUploader from './AttachmentUploader';
 import RecipientSelector from './RecipientSelector';
 import EnhancedEditor from './EnhancedEditor';
@@ -540,230 +540,354 @@ const ComposeEmail: React.FC<ComposeEmailProps> = ({
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
+    <Card className="w-full max-w-5xl mx-auto shadow-lg">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-indigo-950">
         <CardTitle className="flex justify-between items-center">
-          <span>Compose Email</span>
+          <span className="text-xl font-bold">Compose Email</span>
           <Button variant="ghost" size="icon" onClick={handleCancel}>
             <X size={20} />
           </Button>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-6">
         <AIFeatureGuide 
           title="Enhance Your Email with AI" 
           description="Configure AI to access smart composition features" 
         />
         
-        <div className="space-y-4">
-          <div>
-            <div className="flex justify-between items-center">
-              <label htmlFor="to" className="block text-sm font-medium">To:</label>
-              <div className="space-x-2">
-                {!showCc && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-xs" 
-                    onClick={() => setShowCc(true)}
-                  >
-                    <PlusCircle size={14} className="mr-1" />
-                    Cc
-                  </Button>
-                )}
-                {!showBcc && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-xs" 
-                    onClick={() => setShowBcc(true)}
-                  >
-                    <PlusCircle size={14} className="mr-1" />
-                    Bcc
-                  </Button>
-                )}
-              </div>
-            </div>
-            <Input 
-              id="to" 
-              value={to} 
-              onChange={(e) => setTo(e.target.value)} 
-              placeholder="Recipient email address"
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+          {/* Left column: Recipients and subject */}
+          <div className="space-y-4 lg:col-span-2">
+            {/* Recipients section */}
+            <RecipientSelector
+              value={to}
+              onChange={setTo}
+              label="To"
+              placeholder="Enter recipient email addresses..."
             />
-          </div>
-          
-          {showCc && (
-            <div>
-              <div className="flex justify-between items-center">
-                <label htmlFor="cc" className="block text-sm font-medium">Cc:</label>
+            
+            <div className="flex gap-4">
+              {!showCc && (
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
                   className="text-xs" 
-                  onClick={() => setShowCc(false)}
+                  onClick={() => setShowCc(true)}
                 >
-                  <MinusCircle size={14} className="mr-1" />
-                  Remove
+                  <PlusCircle size={14} className="mr-1" />
+                  Add Cc
                 </Button>
-              </div>
-              <Input 
-                id="cc" 
-                value={cc} 
-                onChange={(e) => setCc(e.target.value)} 
-                placeholder="Carbon copy recipients"
-              />
-            </div>
-          )}
-          
-          {showBcc && (
-            <div>
-              <div className="flex justify-between items-center">
-                <label htmlFor="bcc" className="block text-sm font-medium">Bcc:</label>
+              )}
+              {!showBcc && (
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
                   className="text-xs" 
-                  onClick={() => setShowBcc(false)}
+                  onClick={() => setShowBcc(true)}
                 >
-                  <MinusCircle size={14} className="mr-1" />
-                  Remove
+                  <PlusCircle size={14} className="mr-1" />
+                  Add Bcc
                 </Button>
-              </div>
-              <Input 
-                id="bcc" 
-                value={bcc} 
-                onChange={(e) => setBcc(e.target.value)} 
-                placeholder="Blind carbon copy recipients"
-              />
-            </div>
-          )}
-          
-          <div className="flex space-x-2">
-            <div className="flex-1">
-              <label htmlFor="subject" className="block text-sm font-medium">Subject:</label>
-              <Input 
-                id="subject" 
-                value={subject} 
-                onChange={(e) => setSubject(e.target.value)} 
-                placeholder="Email subject"
-              />
-              {autoGenerate && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Auto-generate is on. Type subject to create content.
-                </p>
               )}
             </div>
-            <div className="flex items-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-10 w-10"
-                onClick={handleGenerateSubject}
-                disabled={generateSubject.isPending || !body}
-                title="Generate subject from content"
-              >
-                {generateSubject.isPending ? (
-                  <RefreshCw size={18} className="animate-spin" />
-                ) : (
-                  <Sparkles size={18} />
+            
+            {showCc && (
+              <RecipientSelector
+                value={cc}
+                onChange={setCc}
+                label="Cc"
+                placeholder="Carbon copy recipients..."
+                className="relative"
+              />
+            )}
+            
+            {showBcc && (
+              <RecipientSelector
+                value={bcc}
+                onChange={setBcc}
+                label="Bcc"
+                placeholder="Blind carbon copy recipients..."
+                className="relative"
+              />
+            )}
+            
+            <div className="flex space-x-2 items-end">
+              <div className="flex-1">
+                <label htmlFor="subject" className="block text-sm font-medium mb-1">Subject:</label>
+                <Input 
+                  id="subject" 
+                  value={subject} 
+                  onChange={(e) => setSubject(e.target.value)} 
+                  placeholder="Email subject"
+                  className="border-gray-300 dark:border-gray-600"
+                />
+                {autoGenerate && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Auto-generate is on. Type subject to create content.
+                  </p>
                 )}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-10 w-10"
-                onClick={handleGenerateContent}
-                disabled={generateContent.isPending || !subject}
-                title="Generate content from subject"
-              >
-                {generateContent.isPending ? (
-                  <RefreshCw size={18} className="animate-spin" />
-                ) : (
-                  <MessageSquare size={18} />
-                )}
-              </Button>
-            </div>
-          </div>
-          
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label htmlFor="body" className="block text-sm font-medium">Message:</label>
-              <div className="flex space-x-2">
+              </div>
+              <div className="flex items-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  onClick={handleImproveText}
-                  disabled={improveText.isPending || !body}
-                  className="text-xs"
+                  size="icon"
+                  className="h-10 w-10"
+                  onClick={handleGenerateSubject}
+                  disabled={generateSubject.isPending || !body}
+                  title="Generate subject from content"
                 >
-                  {improveText.isPending ? (
-                    <RefreshCw size={14} className="mr-1 animate-spin" />
+                  {generateSubject.isPending ? (
+                    <RefreshCw size={18} className="animate-spin" />
                   ) : (
-                    <Wand2 size={14} className="mr-1" />
+                    <Sparkles size={18} />
                   )}
-                  Improve Text
                 </Button>
-                
-                <TemplateInserter onInsert={(content) => {
-                  // If there's already content, add a newline
-                  const newContent = body ? `${body}\n\n${content}` : content;
-                  setBody(newContent);
-                }} />
-                
-                <Popover>
-                  <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10"
+                  onClick={handleGenerateContent}
+                  disabled={generateContent.isPending || !subject}
+                  title="Generate content from subject"
+                >
+                  {generateContent.isPending ? (
+                    <RefreshCw size={18} className="animate-spin" />
+                  ) : (
+                    <MessageSquare size={18} />
+                  )}
+                </Button>
+              </div>
+            </div>
+            
+            {/* Email content section */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label htmlFor="body" className="block text-sm font-medium">Message:</label>
+                <div className="flex space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleImproveText}
+                    disabled={improveText.isPending || !body}
+                    className="text-xs"
+                  >
+                    {improveText.isPending ? (
+                      <RefreshCw size={14} className="mr-1 animate-spin" />
+                    ) : (
+                      <Wand2 size={14} className="mr-1" />
+                    )}
+                    Improve Text
+                  </Button>
+                  
+                  <TemplateInserter onInsert={(content) => {
+                    // If there's already content, add a newline
+                    const newContent = body ? `${body}\n\n${content}` : content;
+                    setBody(newContent);
+                  }} />
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        disabled={!body}
+                      >
+                        <Sparkles size={14} className="mr-1" />
+                        Adjust Tone
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-48 p-2">
+                      <div className="flex flex-col space-y-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleAdjustTone('formal')}
+                          disabled={adjustTone.isPending}
+                          className="justify-start"
+                        >
+                          Formal
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleAdjustTone('friendly')}
+                          disabled={adjustTone.isPending}
+                          className="justify-start"
+                        >
+                          Friendly
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleAdjustTone('assertive')}
+                          disabled={adjustTone.isPending}
+                          className="justify-start"
+                        >
+                          Assertive
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleAdjustTone('concise')}
+                          disabled={adjustTone.isPending}
+                          className="justify-start"
+                        >
+                          Concise
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleAdjustTone('persuasive')}
+                          disabled={adjustTone.isPending}
+                          className="justify-start"
+                        >
+                          Persuasive
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              
+              <EnhancedEditor 
+                initialValue={body}
+                onChange={setBody}
+                placeholder="Compose your email..."
+                minHeight="300px"
+                enableAutocomplete={true}
+              />
+              
+              {generateContent.isPending && (
+                <div className="mt-2 flex items-center justify-center space-x-2 text-sm text-gray-500">
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>Generating email content...</span>
+                </div>
+              )}
+              
+              {adjustTone.isPending && (
+                <div className="mt-2 flex items-center justify-center space-x-2 text-sm text-gray-500">
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>Adjusting tone...</span>
+                </div>
+              )}
+              
+              {/* Attachments */}
+              <AttachmentUploader 
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+              />
+            </div>
+          </div>
+          
+          {/* Right column: Email options and tools */}
+          <div className="space-y-4 border-l pl-4 lg:block hidden">
+            <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+              <h3 className="font-medium mb-2">Email Tools</h3>
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Email Tracking</h4>
+                  <EmailTrackingToggle 
+                    onChange={setTrackingOptions}
+                    defaultValue={trackingOptions}
+                  />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Schedule</h4>
+                  <EmailScheduler 
+                    onSchedule={handleScheduleEmail}
+                    disabled={!to || (!subject && !body)}
+                  />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Follow Up</h4>
+                  <FollowUpCreator
+                    subject={subject}
+                    recipient={to}
+                    onFollowUpCreated={handleCreateFollowUp}
+                  />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-2">Templates</h4>
+                  <Link to="/templates" className="w-full">
                     <Button
-                      type="button"
+                      type="button" 
                       variant="outline"
-                      size="sm"
-                      className="text-xs"
-                      disabled={!body}
+                      className="w-full"
                     >
-                      <Sparkles size={14} className="mr-1" />
-                      Adjust Tone
+                      <FileText size={16} className="mr-2" />
+                      Manage Templates
                     </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-48 p-2">
-                    <div className="flex flex-col space-y-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleAdjustTone('formal')}
-                        disabled={adjustTone.isPending}
-                        className="justify-start"
-                      >
-                        Formal
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleAdjustTone('friendly')}
-                        disabled={adjustTone.isPending}
-                        className="justify-start"
-                      >
-                        Friendly
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleAdjustTone('assertive')}
-                        disabled={adjustTone.isPending}
-                        className="justify-start"
-                      >
-                        Assertive
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleAdjustTone('concise')}
-                        disabled={adjustTone.isPending}
-                        className="justify-start"
-                      >
-                        Concise
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-   
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="justify-between bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="flex gap-2">
+          <Button
+            type="button" 
+            variant="outline" 
+            onClick={handleCancel}
+          >
+            Discard
+          </Button>
+          
+          {/* Mobile view for tools */}
+          <div className="flex lg:hidden">
+            <EmailTrackingToggle 
+              onChange={setTrackingOptions}
+              defaultValue={trackingOptions}
+            />
+            <EmailScheduler 
+              onSchedule={handleScheduleEmail}
+              disabled={!to || (!subject && !body)}
+            />
+            <FollowUpCreator
+              subject={subject}
+              recipient={to}
+              onFollowUpCreated={handleCreateFollowUp}
+            />
+          </div>
+        </div>
+        <div className="flex space-x-2">
+          <Button
+            type="button" 
+            variant="outline" 
+            onClick={handleSaveDraft}
+            disabled={saveDraft.isPending}
+          >
+            <Save size={18} className="mr-2" />
+            Save Draft
+          </Button>
+          <Button
+            type="button" 
+            onClick={handleSend}
+            disabled={sendEmail.isPending}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Send size={18} className="mr-2" />
+            Send
+          </Button>
+        </div>
+      </CardFooter>
+      
+      {/* Feedback prompt for AI-generated content */}
+      {replyId && (
+        <FeedbackPrompt 
+          replyId={replyId}
+          show={showFeedbackPrompt}
+          onClose={handleFeedbackClose}
+        />
+      )}
+    </Card>
+  );
+};
+
+export default ComposeEmail;

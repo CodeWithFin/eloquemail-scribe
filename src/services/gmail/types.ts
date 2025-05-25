@@ -49,4 +49,5 @@ export interface EmailDraft {
   body: string;
   cc?: string;
   bcc?: string;
+  attachments?: File[];
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import ComposeEmail from '../components/email/ComposeEmail.fixed';
+import ComposeEmail from '../components/email/ComposeEmail.new';
 import Header from '../components/layout/Header';
 import { isGmailAuthenticated } from '@/services/gmail';
 import { Navigate } from 'react-router-dom';
